@@ -1,0 +1,91 @@
+Request Body
+application/json
+Required
+List of filters to use as search criteria
+
+companies
+object
+Show Attributes
+countries
+array<string>
+Countries - searches for companies with headquarters in the list (maximum: 100). Only ISO 3166 alpha-2 country codes accepted, check codes at https://datahub.io/core/country-list#data
+
+domains
+array<string>
+Domains - List of domains or website addresses of the companies we want to look for. Provide less than 10000 domains, all of them must be valid Fully Qualified Domain Names or Hostnames
+
+domainsExcluded
+array<string>
+DomainsExcluded - List of domains to exclude from the search. Provide less than 10000 domains, all of them must be valid addresses. Provide less than 10000 domains, all of them must be valid Fully Qualified Domain Names or Hostnames
+
+employeeCount
+object
+Range - to search for in a range of values
+
+Show Attributes
+from
+integer
+From - Minimum value, must be greater than or equal to 0
+
+Minimum: 0
+to
+integer
+To - Maximum value, must be greater than 'from' other. Must be greater than 0 or it will be ignored
+
+Minimum: 0
+industries
+array<string>
+Industries - List of industries a company can belong to. Check industries for the full list of accepted values.
+
+names
+array<string>
+Names - List of names of the companies we want to look for
+
+revenue
+object
+Range - to search for in a range of values
+
+Show Attributes
+from
+integer
+From - Minimum value, must be greater than or equal to 0
+
+Minimum: 0
+to
+integer
+To - Maximum value, must be greater than 'from' other. Must be greater than 0 or it will be ignored
+
+Minimum: 0
+limit
+integer
+Limit - Is the maximum amount of results per page, must be between 1 and 200
+
+Default: 10
+Minimum: 1
+Maximum: 200
+pageToken
+string
+PageToken - token to retrieve the next page of results. When provided, the filters originally used for the first page are reused and any changes to filters are ignored.
+
+people
+object
+Show Attributes
+countries
+array<string>
+Countries - searches for companies with headquarters in the list (maximum: 100). Only ISO 3166 alpha-2 country codes accepted, check codes at https://datahub.io/core/country-list#data
+
+departments
+array<string>
+Departments - List of departments that a person can belong to (maximum: 100). Check departments for the full list of accepted values.
+
+jobTitles
+array<string>
+JobTitles - List of job titles that apply to a person (maximum: 100)
+
+seniorities
+array<string>
+Seniorities - List of seniorities, searches for people that matches at-least one of the provided (maximum: 100). Check seniorities for the full list of accepted values.
+
+peoplePerCompany
+integer
+PeoplePerCompany - Limits the number of people returned per company when searching by domain or name only. Valid values are between 1 and 5. For more in-depth results, search using a single domain and omit this parameter. This field is ignored if the search includes criteria beyond domain or name.

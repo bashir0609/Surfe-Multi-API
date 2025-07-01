@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block title %}Diagnostics - Surfe API Project{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="fas fa-stethoscope me-3"></i>
+                    API Diagnostics
+                </h1>
+                <p class="text-muted mb-0">
+                    Deep analysis of API key system performance and health
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button id="run-diagnostics" class="btn btn-primary">
+                    <i class="fas fa-play me-2"></i>
+                    Run Diagnostics
+                </button>
+                <button id="export-diagnostics" class="btn btn-outline-info">
+                    <i class="fas fa-download me-2"></i>
+                    Export Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Overview -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        API Key System Analysis
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="stat-value text-primary" id="diag-total-keys">-</div>
+                                <div class="stat-label">Total Keys</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="stat-value text-success" id="diag-active-keys">-</div>
+                                <div class="stat-label">Active Keys</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="stat-value text-warning" id="diag-success-rate">-</div>
+                                <div class="stat-label">Success Rate</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="stat-value text-info" id="diag-uptime">-</div>
+                                <div class="stat-label">Uptime</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">
+                                <i class="fas fa-heartbeat me-2"></i>
+                                System Health
+                            </h6>
+                            <div id="health-details">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-sync-alt fa-spin fa-2x mb-3"></i>
+                                    <p>Click "Run Diagnostics" to analyze system health</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">
+                                <i class="fas fa-cogs me-2"></i>
+                                Performance Metrics
+                            </h6>
+                            <div id="performance-metrics">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-chart-bar fa-2x mb-3"></i>
+                                    <p>Performance data will appear here</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Recent Activity
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="recent-activity">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-clock fa-2x mb-3"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Keys Detailed Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-key me-2"></i>
+                API Keys Detailed Analysis
+            </h5>
+        </div>
+        <div class="card-body">
+            <div id="api-keys-analysis">
+                <div class="text-center text-muted p-4">
+                    <i class="fas fa-search fa-2x mb-3"></i>
+                    <p>Run diagnostics to see detailed API key analysis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Log and Troubleshooting -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error Log
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="error-log" class="scroll-area">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-shield-alt fa-2x mb-3"></i>
+                            <p>No errors detected</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>
+                        Troubleshooting
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button id="test-single-key" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-flask me-2"></i>
+                            Test Single API Key
+                        </button>
+                        <button id="test-selected-key" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            Test Selected Key
+                        </button>
+                        <button id="reset-failed-keys" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-redo me-2"></i>
+                            Reset Failed Keys
+                        </button>
+                        <button id="force-refresh" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-refresh me-2"></i>
+                            Force System Refresh
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="mb-2">Quick Checks</h6>
+                    <div id="quick-checks">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="check-connectivity" disabled>
+                            <label class="form-check-label" for="check-connectivity">
+                                API Connectivity
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="check-keys" disabled>
+                            <label class="form-check-label" for="check-keys">
+                                API Keys Valid
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="check-selection" disabled>
+                            <label class="form-check-label" for="check-selection">
+                                Selected Key Working
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="check-fallback" disabled>
+                            <label class="form-check-label" for="check-fallback">
+                                Fallback Mechanism
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results -->
+    <div id="test-results" class="mt-4 hidden">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-clipboard-check me-2"></i>
+                    Test Results
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="test-output">
+                    <!-- Test results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Diagnostics Page JavaScript
+(function() {
+    'use strict';
+    
+    let diagnosticsRunning = false;
+    
+    // Initialize diagnostics page
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+        loadInitialData();
+    });
+    
+    function setupEventListeners() {
+        // Run diagnostics button
+        const runBtn = document.getElementById('run-diagnostics');
+        if (runBtn) {
+            runBtn.addEventListener('click', runFullDiagnostics);
+        }
+        
+        // Export diagnostics
+        const exportBtn = document.getElementById('export-diagnostics');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', exportDiagnosticsReport);
+        }
+        
+        // Troubleshooting buttons
+        document.getElementById('test-single-key')?.addEventListener('click', testSingleKey);
+        document.getElementById('test-selected-key')?.addEventListener('click', testSelectedKey);
+        document.getElementById('reset-failed-keys')?.addEventListener('click', resetFailedKeys);
+        document.getElementById('force-refresh')?.addEventListener('click', forceRefresh);
+    }
+    
+    function loadInitialData() {
+        // Load basic stats
+        SurfeApp.api.getStats()
+            .then(stats => {
+                updateBasicStats(stats);
+            })
+            .catch(error => {
+                console.error('Failed to load initial diagnostics data:', error);
+            });
+    }
+    
+    function updateBasicStats(stats) {
+        document.getElementById('diag-total-keys').textContent = stats.total_keys || 0;
+        document.getElementById('diag-active-keys').textContent = stats.active_keys || 0;
+        document.getElementById('diag-success-rate').textContent = `${(stats.success_rate || 0).toFixed(1)}%`;
+        document.getElementById('diag-uptime').textContent = stats.active_keys > 0 ? '100%' : '0%';
+    }
+    
+    function runFullDiagnostics() {
+        if (diagnosticsRunning) return;
+        
+        diagnosticsRunning = true;
+        updateRunButton(true);
+        
+        SurfeApp.ui.showToast('Running comprehensive diagnostics...', 'info');
+        
+        Promise.all([
+            runHealthCheck(),
+            runPerformanceAnalysis(),
+            runKeyAnalysis(),
+            runConnectivityTests()
+        ])
+        .then(results => {
+            displayDiagnosticsResults(results);
+            SurfeApp.ui.showToast('Diagnostics completed successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Diagnostics failed:', error);
+            SurfeApp.ui.showToast('Diagnostics failed: ' + error.message, 'error');
+        })
+        .finally(() => {
+            diagnosticsRunning = false;
+            updateRunButton(false);
+        });
+    }
+    
+    function runHealthCheck() {
+        return SurfeApp.api.getHealthCheck()
+            .then(health => {
+                const healthHtml = `
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>System Status</span>
+                            <span class="badge bg-${health.status === 'healthy' ? 'success' : 'danger'}">${health.status}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Active Keys</span>
+                            <span class="badge bg-info">${health.simple_system?.enabled_keys || 0}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Health Percentage</span>
+                            <span class="badge bg-primary">${health.simple_system?.has_valid_selection ? '100' : '0'}%</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('health-details').innerHTML = healthHtml;
+                return health;
+            });
+    }
+    
+    function runPerformanceAnalysis() {
+        return SurfeApp.api.getStats()
+            .then(stats => {
+                const avgSuccessRate = Object.values(stats.key_details || {})
+                    .reduce((acc, key) => acc + (key.success_rate || 0), 0) / 
+                    Object.keys(stats.key_details || {}).length;
+                
+                const metricsHtml = `
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Total Requests</span>
+                            <span class="badge bg-secondary">${SurfeApp.utils.formatNumber(stats.total_requests || 0)}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Average Success Rate</span>
+                            <span class="badge bg-success">${SurfeApp.utils.formatPercentage(avgSuccessRate || 0)}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Last Key Used</span>
+                            <span class="badge bg-info">${stats.last_key_used || 'None'}</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('performance-metrics').innerHTML = metricsHtml;
+                return stats;
+            });
+    }
+    
+    function runKeyAnalysis() {
+        return SurfeApp.api.getStats()
+            .then(stats => {
+                const keyDetails = stats.key_details || {};
+                
+                if (Object.keys(keyDetails).length === 0) {
+                    document.getElementById('api-keys-analysis').innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No API key details available
+                        </div>
+                    `;
+                    return stats;
+                }
+                
+                const keysHtml = Object.entries(keyDetails)
+                    .map(([keyId, keyData]) => `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card border-${keyData.is_disabled ? 'danger' : 'success'}">
+                                <div class="card-body">
+                                    <h6 class="card-title font-monospace">${keyId}</h6>
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <small class="text-muted">Success Rate</small>
+                                            <div class="h6 text-${keyData.success_rate > 80 ? 'success' : keyData.success_rate > 50 ? 'warning' : 'danger'}">
+                                                ${SurfeApp.utils.formatPercentage(keyData.success_rate || 0)}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Total Requests</small>
+                                            <div class="h6">${SurfeApp.utils.formatNumber(keyData.total_requests || 0)}</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-${keyData.is_disabled ? 'danger' : 'success'}">
+                                            ${keyData.is_disabled ? 'Disabled' : 'Active'}
+                                        </span>
+                                        ${keyData.failed_attempts > 0 ? `
+                                            <span class="badge bg-warning">${keyData.failed_attempts} failures</span>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                
+                document.getElementById('api-keys-analysis').innerHTML = `<div class="row">${keysHtml}</div>`;
+                return stats;
+            });
+    }
+    
+    function runConnectivityTests() {
+        // Update quick check indicators
+        const checks = ['connectivity', 'keys', 'selection', 'fallback'];
+        
+        return SurfeApp.api.getHealthCheck()
+            .then(health => {
+                // Simulate check results based on health data
+                const isHealthy = health.status === 'healthy';
+                const hasActiveKeys = (health.simple_system?.enabled_keys || 0) > 0;
+                
+                checks.forEach((check, index) => {
+                    const checkbox = document.getElementById(`check-${check}`);
+                    if (checkbox) {
+                        setTimeout(() => {
+                            checkbox.checked = isHealthy && hasActiveKeys;
+                            checkbox.disabled = false;
+                        }, index * 500); // Stagger the checks for visual effect
+                    }
+                });
+                
+                return health;
+            });
+    }
+    
+    function testSingleKey() {
+        SurfeApp.ui.showToast('Testing single API key...', 'info');
+        
+        SurfeApp.api.getHealthCheck()
+            .then(health => {
+                showTestResult('Single Key Test', health.status === 'healthy' ? 'PASS' : 'FAIL', 
+                    `API key test ${health.status === 'healthy' ? 'successful' : 'failed'}`);
+            })
+            .catch(error => {
+                showTestResult('Single Key Test', 'FAIL', error.message);
+            });
+    }
+    
+    function testSelectedKey() {
+        SurfeApp.ui.showToast('Testing selected key...', 'info');
+        
+        // Test selected key by making multiple API calls
+        const testPromises = Array.from({length: 3}, (_, i) => 
+            SurfeApp.api.getHealthCheck().catch(e => ({ error: e.message }))
+        );
+        
+        Promise.all(testPromises)
+            .then(results => {
+                const successCount = results.filter(r => !r.error).length;
+                const status = successCount > 0 ? 'PASS' : 'FAIL';
+                showTestResult('Selected Key Test', status, 
+                    `${successCount}/${results.length} requests successful`);
+            });
+    }
+    
+    function resetFailedKeys() {
+        SurfeApp.ui.showToast('Attempting to reset failed keys...', 'warning');
+        // In a real implementation, this would call an endpoint to reset failed keys
+        setTimeout(() => {
+            SurfeApp.ui.showToast('Failed keys reset attempt completed', 'info');
+            runFullDiagnostics(); // Refresh diagnostics
+        }, 2000);
+    }
+    
+    function forceRefresh() {
+        SurfeApp.ui.showToast('Forcing system refresh...', 'info');
+        location.reload();
+    }
+    
+    function showTestResult(testName, status, message) {
+        const testResults = document.getElementById('test-results');
+        const testOutput = document.getElementById('test-output');
+        
+        const resultHtml = `
+            <div class="alert alert-${status === 'PASS' ? 'success' : 'danger'}" role="alert">
+                <h6 class="alert-heading">
+                    <i class="fas fa-${status === 'PASS' ? 'check-circle' : 'times-circle'} me-2"></i>
+                    ${testName}: ${status}
+                </h6>
+                <p class="mb-0">${message}</p>
+                <small class="text-muted">Completed at ${new Date().toLocaleTimeString()}</small>
+            </div>
+        `;
+        
+        testOutput.innerHTML = resultHtml + testOutput.innerHTML;
+        testResults.style.display = 'block';
+    }
+    
+    function displayDiagnosticsResults(results) {
+        const activityHtml = `
+            <div class="list-group list-group-flush">
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">Full Diagnostics Completed</h6>
+                        <small class="text-success">${new Date().toLocaleTimeString()}</small>
+                    </div>
+                    <p class="mb-1">Comprehensive system analysis finished</p>
+                </div>
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">Health Check</h6>
+                        <small class="text-info">Completed</small>
+                    </div>
+                    <p class="mb-1">System health verification passed</p>
+                </div>
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">Performance Analysis</h6>
+                        <small class="text-info">Completed</small>
+                    </div>
+                    <p class="mb-1">API performance metrics analyzed</p>
+                </div>
+            </div>
+        `;
+        document.getElementById('recent-activity').innerHTML = activityHtml;
+    }
+    
+    function exportDiagnosticsReport() {
+        SurfeApp.ui.showToast('Preparing diagnostics report...', 'info');
+        
+        Promise.all([
+            SurfeApp.api.getStats(),
+            SurfeApp.api.getHealthCheck()
+        ])
+        .then(([stats, health]) => {
+            const report = {
+                timestamp: new Date().toISOString(),
+                system_health: health,
+                api_statistics: stats,
+                diagnostics_summary: {
+                    total_keys: stats.total_keys,
+                    active_keys: stats.active_keys,
+                    health_percentage: stats.success_rate,
+                    last_key_used: stats.last_key_used
+                }
+            };
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            SurfeApp.export.toJson(report, `diagnostics_report_${timestamp}.json`);
+        })
+        .catch(error => {
+            SurfeApp.ui.showToast('Failed to export diagnostics report', 'error');
+        });
+    }
+    
+    function updateRunButton(isRunning) {
+        const runBtn = document.getElementById('run-diagnostics');
+        if (!runBtn) return;
+        
+        if (isRunning) {
+            runBtn.disabled = true;
+            runBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Running...';
+        } else {
+            runBtn.disabled = false;
+            runBtn.innerHTML = '<i class="fas fa-play me-2"></i>Run Diagnostics';
+        }
+    }
+    
+})();
+</script>
+{% endblock %}

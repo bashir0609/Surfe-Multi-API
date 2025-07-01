@@ -1,0 +1,720 @@
+/* ====================================================================
+   Surfe API Project - Main Stylesheet
+   Built with Bootstrap 5 Dark Theme for Replit
+   ==================================================================== */
+
+/* Import Bootstrap Dark Theme */
+@import url('https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css');
+
+/* ====================================================================
+   Custom Variables and Overrides
+   ==================================================================== */
+
+:root {
+  --surfe-primary: #0066cc;
+  --surfe-secondary: #2d3748;
+  --surfe-success: #38a169;
+  --surfe-warning: #d69e2e;
+  --surfe-danger: #e53e3e;
+  --surfe-info: #3182ce;
+  --surfe-light: #f7fafc;
+  --surfe-dark: #1a202c;
+  
+  /* API Key Status Colors */
+  --key-active: var(--bs-success);
+  --key-disabled: var(--bs-danger);
+  --key-cooldown: var(--bs-warning);
+  
+  /* Spacing */
+  --section-spacing: 2rem;
+  --card-spacing: 1.5rem;
+}
+
+/* ====================================================================
+   Global Layout and Typography
+   ==================================================================== */
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.main-content {
+  min-height: calc(100vh - 76px); /* Account for navbar */
+  padding: var(--section-spacing) 0;
+}
+
+/* ====================================================================
+   Navigation and Header
+   ==================================================================== */
+
+.navbar-brand {
+  font-weight: 600;
+}
+
+.dropdown-menu {
+  border: 1px solid var(--bs-border-color);
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.dropdown-item.active {
+  background-color: var(--bs-primary);
+  color: white;
+}
+
+/* ====================================================================
+   Input Method Cards (for Enrichment Pages)
+   ==================================================================== */
+
+.input-method-card {
+  padding: 1rem;
+  border: 2px solid var(--bs-border-color);
+  border-radius: 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--bs-body-bg);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.input-method-card:hover {
+  border-color: var(--bs-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
+}
+
+.input-method-card.active {
+  border-color: var(--bs-primary);
+  background: rgba(0, 102, 204, 0.1);
+}
+
+.input-method-card .method-icon {
+  font-size: 1.5rem;
+  color: var(--bs-primary);
+  margin-bottom: 0.75rem;
+}
+
+.input-method-card h6 {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.input-method-card p {
+  margin-bottom: 0;
+  font-size: 0.875rem;
+}
+
+/* ====================================================================
+   Input Sections
+   ==================================================================== */
+
+.input-section {
+  display: none;
+  margin-top: 2rem;
+}
+
+.input-section.active {
+  display: block;
+}
+
+/* ====================================================================
+   Enrichment Results
+   ==================================================================== */
+
+.enrichment-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.person-card,
+.company-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.person-card:hover,
+.company-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.person-avatar,
+.company-logo {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 102, 204, 0.1);
+}
+
+.company-logo-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.person-name,
+.company-name {
+  font-weight: 600;
+  color: var(--bs-body-color);
+}
+
+.person-title,
+.company-industry {
+  font-size: 0.875rem;
+  color: var(--bs-secondary-color);
+}
+
+.person-company,
+.company-location {
+  font-size: 0.875rem;
+}
+
+.person-actions,
+.company-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.person-details,
+.company-details {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.company-metrics {
+  background: rgba(0, 102, 204, 0.05);
+  border-radius: 0.375rem;
+  padding: 1rem;
+}
+
+.metric-item {
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--bs-primary);
+  display: block;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.company-description {
+  font-style: italic;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+/* ====================================================================
+   Form Enhancements
+   ==================================================================== */
+
+.filter-group {
+  margin-bottom: 1.5rem;
+}
+
+.filter-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--bs-body-color);
+}
+
+.enrichment-button,
+.search-button {
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+}
+
+.enrichment-button {
+  background: linear-gradient(135deg, var(--bs-success), #48bb78);
+  border: none;
+  box-shadow: 0 2px 4px rgba(56, 161, 105, 0.3);
+}
+
+.enrichment-button:hover {
+  background: linear-gradient(135deg, #38a169, #48bb78);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(56, 161, 105, 0.4);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.nav-link {
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.nav-link:hover {
+  transform: translateY(-1px);
+}
+
+/* ====================================================================
+   Dashboard Components
+   ==================================================================== */
+
+.dashboard-header {
+  border-bottom: 2px solid var(--bs-border-color);
+  margin-bottom: var(--section-spacing);
+  padding-bottom: 1rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: var(--section-spacing);
+}
+
+.stat-card {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--bs-secondary);
+  margin-bottom: 0;
+}
+
+.stat-change {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ====================================================================
+   API Key Management
+   ==================================================================== */
+
+.api-keys-section {
+  margin-top: var(--section-spacing);
+}
+
+.key-status-card {
+  border-left: 4px solid var(--bs-border-color);
+  transition: all 0.3s ease;
+}
+
+.key-status-card.active {
+  border-left-color: var(--key-active);
+}
+
+.key-status-card.disabled {
+  border-left-color: var(--key-disabled);
+}
+
+.key-status-card.cooldown {
+  border-left-color: var(--key-cooldown);
+}
+
+.key-identifier {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.key-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.metric-item {
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: block;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--bs-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ====================================================================
+   Search Forms and Filters
+   ==================================================================== */
+
+.search-section {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg);
+  padding: var(--card-spacing);
+  margin-bottom: var(--section-spacing);
+}
+
+.filter-group {
+  margin-bottom: 1.5rem;
+}
+
+.filter-label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.search-button {
+  min-width: 150px;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+}
+
+/* Multi-select styling */
+.form-select[multiple] {
+  min-height: 120px;
+}
+
+/* ====================================================================
+   Results Display
+   ==================================================================== */
+
+.results-section {
+  margin-top: var(--section-spacing);
+}
+
+.result-card {
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+
+.result-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.result-header {
+  background: var(--bs-gray-100);
+  border-bottom: 1px solid var(--bs-border-color);
+  padding: 1rem;
+  font-weight: 600;
+}
+
+.result-body {
+  padding: 1rem;
+}
+
+.result-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-label {
+  font-size: 0.75rem;
+  color: var(--bs-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.meta-value {
+  font-weight: 500;
+}
+
+/* ====================================================================
+   Loading States and Animations
+   ==================================================================== */
+
+.loading-spinner {
+  text-align: center;
+  padding: 3rem;
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: var(--bs-secondary);
+}
+
+/* Pulse animation for loading cards */
+.loading-card {
+  background: linear-gradient(90deg, var(--bs-gray-200) 25%, var(--bs-gray-300) 50%, var(--bs-gray-200) 75%);
+  background-size: 200% 100%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ====================================================================
+   Status Badges and Indicators
+   ==================================================================== */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--bs-border-radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-active {
+  background-color: var(--bs-success-bg-subtle);
+  color: var(--bs-success);
+}
+
+.status-active .status-indicator {
+  background-color: var(--bs-success);
+}
+
+.status-disabled {
+  background-color: var(--bs-danger-bg-subtle);
+  color: var(--bs-danger);
+}
+
+.status-disabled .status-indicator {
+  background-color: var(--bs-danger);
+}
+
+.status-warning {
+  background-color: var(--bs-warning-bg-subtle);
+  color: var(--bs-warning);
+}
+
+.status-warning .status-indicator {
+  background-color: var(--bs-warning);
+}
+
+/* ====================================================================
+   Error States and Messages
+   ==================================================================== */
+
+.error-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--bs-secondary);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--bs-danger);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--bs-secondary);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--bs-info);
+}
+
+/* ====================================================================
+   Export and Action Buttons
+   ==================================================================== */
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+/* ====================================================================
+   Progress Bars and Health Indicators
+   ==================================================================== */
+
+.health-bar {
+  height: 8px;
+  background-color: var(--bs-gray-200);
+  border-radius: var(--bs-border-radius-pill);
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.health-fill {
+  height: 100%;
+  transition: width 0.6s ease;
+  border-radius: var(--bs-border-radius-pill);
+}
+
+.health-excellent { background-color: var(--bs-success); }
+.health-good { background-color: var(--bs-info); }
+.health-warning { background-color: var(--bs-warning); }
+.health-danger { background-color: var(--bs-danger); }
+
+/* ====================================================================
+   Responsive Design
+   ==================================================================== */
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .result-meta {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .search-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .main-content {
+    padding: 1rem 0;
+  }
+  
+  .stat-card,
+  .search-section {
+    padding: 1rem;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+  }
+}
+
+/* ====================================================================
+   Accessibility Improvements
+   ==================================================================== */
+
+/* Focus styles */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .stat-card,
+  .search-section,
+  .result-card {
+    border-width: 2px;
+  }
+}
+
+/* ====================================================================
+   Display Utility Classes
+   ==================================================================== */
+
+.hidden {
+  display: none !important;
+}
+
+.visible {
+  display: block !important;
+}
+
+.d-flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.z-index-toast {
+  z-index: 1055;
+}
+
+.scroll-area {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ====================================================================
+   Print Styles
+   ==================================================================== */
+
+@media print {
+  .navbar,
+  .action-buttons,
+  .search-section {
+    display: none !important;
+  }
+  
+  .result-card {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+  
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+}
