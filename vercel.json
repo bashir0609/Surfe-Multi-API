@@ -17,12 +17,7 @@
   ],
   "env": {
     "FLASK_ENV": "production"
-  },
-  "functions": {
-    "main.py": {
-      "maxDuration": 30
-    }
-  },
+  }
   "headers": [
     {
       "source": "/static/(.*)",
