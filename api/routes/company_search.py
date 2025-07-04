@@ -16,9 +16,17 @@ def search_companies():
         if not request_data:
             return jsonify({"error": "No JSON data provided"}), 400
 
+        # --- CORRECTION ---
+        # Add validation to ensure at least one filter is provided.
+        # Many APIs reject requests with no filters to prevent overly broad searches.
+        filters = request_data.get("filters")
+        if not filters:  # This checks for None or an empty dictionary {}
+            logger.warning("Empty search request received. No filters applied.")
+            return jsonify({"error": "Please apply at least one search filter to begin."}), 400
+
         logger.info(f"🔍 Company Search Request: {request_data}")
 
-        # Call the updated paginated fetch function
+        # Call the paginated fetch function only if filters are present
         all_companies = fetch_all_companies_paginated(request_data)
 
         logger.info(f"✅ Company Search Success: Found {len(all_companies)} companies")
@@ -56,9 +64,8 @@ def fetch_all_companies_paginated(payload):
         # Calculate how many more results we need for the next API call.
         remaining_needed = desired_total_limit - len(all_companies)
         
-        # --- CORRECTION ---
         # Use the 'limit' parameter for the page size, which is what the Surfe API
-        # likely expects, instead of 'pageSize'. We cap it at a reasonable max (e.g., 100).
+        # likely expects. We cap it at a reasonable max (e.g., 100).
         payload_copy["limit"] = min(remaining_needed, 100)
 
         # Use the existing client wrapper to make the API request
