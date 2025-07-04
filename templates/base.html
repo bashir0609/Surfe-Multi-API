@@ -40,11 +40,11 @@
                         </a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if request.endpoint in ['people_search_page', 'people_search_v2_page', 'people_enrichment_page'] %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint in ['people_search_page', 'people_search_page', 'people_enrichment_page'] %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-users me-1"></i>People
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item {% if request.endpoint == 'people_search_v2_page' %}active{% endif %}" href="{{ url_for('people_search_v2_page') }}">
+                            <li><a class="dropdown-item {% if request.endpoint == 'people_search_page' %}active{% endif %}" href="{{ url_for('people_search_page') }}">
                                 <i class="fas fa-search me-2"></i>People Search
                             </a></li>
                             <li><a class="dropdown-item {% if request.endpoint == 'people_enrichment_page' %}active{% endif %}" href="{{ url_for('people_enrichment_page') }}">
@@ -53,11 +53,11 @@
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if request.endpoint in ['company_search_page', 'company_search_v2_page', 'company_enrichment_page'] %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint in ['company_search_page', 'company_search_page', 'company_enrichment_page'] %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-building me-1"></i>Companies
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item {% if request.endpoint == 'company_search_v2_page' %}active{% endif %}" href="{{ url_for('company_search_v2_page') }}">
+                            <li><a class="dropdown-item {% if request.endpoint == 'company_search_page' %}active{% endif %}" href="{{ url_for('company_search_page') }}">
                                 <i class="fas fa-search me-2"></i>Company Search
                             </a></li>
                             <li><a class="dropdown-item {% if request.endpoint == 'company_enrichment_page' %}active{% endif %}" href="{{ url_for('company_enrichment_page') }}">
