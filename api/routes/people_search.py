@@ -150,8 +150,8 @@ def fetch_all_people_paginated(api_key, payload):
     all_people = []
     page_token = ""
     
-    # Get the desired limit from payload (default to 1 if not specified)
-    desired_limit = payload.get("limit", 1)
+    # Get the desired limit from payload (default to 10 if not specified)
+    desired_limit = payload.get("limit", 10)
     
     # Make a shallow copy of payload to avoid mutating the original dict
     payload_copy = dict(payload)
