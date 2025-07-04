@@ -3,7 +3,7 @@ import logging
 import asyncio
 from flask import request, jsonify
 from utils.simple_api_client import simple_surfe_client
-from config.simple_api_manager import simple_api_manager 
+from config.simple_api_manager import simple_api_manager
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ def search_companies():
 
         logger.info(f"🔍 Company Search Request: {request_data}")
 
+        # Call the updated paginated fetch function
         all_companies = fetch_all_companies_paginated(request_data)
 
         logger.info(f"✅ Company Search Success: Found {len(all_companies)} companies")
@@ -28,51 +29,63 @@ def search_companies():
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
 def fetch_all_companies_paginated(payload):
+    """
+    Fetches companies from the Surfe API with proper pagination,
+    respecting the requested limit.
+    """
     all_companies = []
     page_token = ""
     
     # Get the desired limit from payload (default to 10 if not specified)
     desired_limit = payload.get("limit", 10)
     
-    # Make a shallow copy of payload to avoid mutating the original dict
+    # --- CORRECTION ---
+    # Make a shallow copy of the payload. It's crucial to remove the 'limit' key,
+    # as it's for our internal logic, not for the Surfe API. Sending an unknown
+    # parameter can cause a 500 error on the server.
     payload_copy = dict(payload)
-    
-    while True:
+    if 'limit' in payload_copy:
+        del payload_copy['limit']
+
+    # Loop until we have enough companies or the API runs out of results.
+    while len(all_companies) < desired_limit:
         payload_copy["pageToken"] = page_token
         
-        # Calculate how many more results we need
+        # --- CORRECTION ---
+        # Calculate how many more results we need and tell the API how many to fetch.
+        # Most APIs use a 'pageSize' parameter for this. This is more efficient
+        # than fetching a full default page and discarding results.
+        # We also cap it at a reasonable max (e.g., 100) as per typical API limits.
         remaining_needed = desired_limit - len(all_companies)
-        
-        # If we already have enough results, break
-        if remaining_needed <= 0:
-            break
-            
-        # Use existing client wrapper
+        payload_copy["pageSize"] = min(remaining_needed, 100)
+
+        # Use the existing client wrapper to make the API request
         result = simple_surfe_client.make_request(
             method="POST",
             endpoint="/v2/companies/search",
             json_data=payload_copy
         )
         
+        # If the API returns an error, log it and stop fetching.
         if "error" in result:
             logger.error(f"❌ Surfe API Error: {result.get('error')}")
             break
             
         companies = result.get("companies", [])
         
+        # If the API returns no companies, we've reached the end.
         if not companies:
-            break  # Stop if no companies returned
-            
-        # Add companies but don't exceed the desired limit
-        companies_to_add = companies[:remaining_needed]
-        all_companies.extend(companies_to_add)
-        
-        # If we've reached our desired limit, stop
-        if len(all_companies) >= desired_limit:
             break
         
+        # Add the fetched companies to our list
+        all_companies.extend(companies)
+        
+        # Get the token for the next page
         page_token = result.get("nextPageToken")
+        
+        # If there's no next page token, we're done.
         if not page_token:
-            break  # Stop if no more pages
+            break
             
-    return all_companies
+    # As a final safeguard, trim the list to the exact desired limit.
+    return all_companies[:desired_limit]
