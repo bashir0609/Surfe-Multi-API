@@ -17,33 +17,16 @@ def search_companies():
 
         logger.info(f"🔍 Company Search Request: {request_data}")
 
-        # Get the currently selected API key from your key manager
-        api_key = simple_api_manager.get_selected_key()
-        if not api_key:
-            logger.error("No Surfe API key is selected or available!")
-            return jsonify({"error": "No Surfe API key is configured. Please check your settings."}), 500
-
-        all_companies = fetch_all_companies_paginated(api_key, request_data)
+        all_companies = fetch_all_companies_paginated(request_data)
 
         logger.info(f"✅ Company Search Success: Found {len(all_companies)} companies")
         return jsonify({"success": True, "data": {"companies": all_companies}})
 
     except Exception as e:
-        error_msg = str(e)
         logger.error(f"❌ Unexpected error in company search: {str(e)}")
-        status_code = 500
-        if "No API key selected" in error_msg:
-            status_code = 400
-        return jsonify({"success": False, "error": error_msg}), status_code
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
-def fetch_all_companies_paginated(api_key, payload):
-    import requests
-
-    url = "https://api.surfe.com/v2/companies/search"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+def fetch_all_companies_paginated(payload):
     all_companies = []
     page_token = ""
     
@@ -63,14 +46,18 @@ def fetch_all_companies_paginated(api_key, payload):
         if remaining_needed <= 0:
             break
             
-        response = requests.post(url, headers=headers, json=payload_copy, timeout=30)
+        # Use existing client wrapper
+        result = simple_surfe_client.make_request(
+            method="POST",
+            endpoint="/v2/companies/search",
+            json_data=payload_copy
+        )
         
-        if response.status_code != 200:
-            logger.error(f"Error: {response.status_code} - {response.text}")
-            break  # Stop if quota is reached or any error occurs
+        if "error" in result:
+            logger.error(f"❌ Surfe API Error: {result.get('error')}")
+            break
             
-        data = response.json()
-        companies = data.get("companies", [])
+        companies = result.get("companies", [])
         
         if not companies:
             break  # Stop if no companies returned
@@ -83,7 +70,7 @@ def fetch_all_companies_paginated(api_key, payload):
         if len(all_companies) >= desired_limit:
             break
         
-        page_token = data.get("nextPageToken")
+        page_token = result.get("nextPageToken")
         if not page_token:
             break  # Stop if no more pages
             
