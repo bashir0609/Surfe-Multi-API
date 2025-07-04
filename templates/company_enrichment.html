@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Company Enrichment - Surfe API Project{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="fas fa-building-user me-3"></i>
+                    Company Enrichment
+                </h1>
+                <p class="text-muted mb-0">
+                    Enrich existing company data with comprehensive business information
+                </p>
+            </div>
+            <div>
+                <span class="badge bg-success">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Simple Key Selection
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Methods -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>
+                        Input Methods
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="input-method-card active" data-method="manual">
+                                <div class="method-icon">
+                                    <i class="fas fa-edit"></i>
+                                </div>
+                                <h6>Manual Entry</h6>
+                                <p class="small text-muted">Enter company data manually</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-method-card" data-method="csv">
+                                <div class="method-icon">
+                                    <i class="fas fa-file-csv"></i>
+                                </div>
+                                <h6>CSV Upload</h6>
+                                <p class="small text-muted">Upload a CSV file with company data</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-method-card" data-method="bulk">
+                                <div class="method-icon">
+                                    <i class="fas fa-list"></i>
+                                </div>
+                                <h6>Bulk Input</h6>
+                                <p class="small text-muted">Enter multiple entries at once</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Entry Form -->
+    <div id="manual-input" class="input-section active">
+        <form id="company-enrichment-form">
+            <!-- API v2 Compliance Notice -->
+            <div class="alert alert-info mb-4">
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-info-circle me-3 mt-1"></i>
+                    <div>
+                        <strong>Surfe API v2 Requirements:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Domain Required:</strong> Company domain is the only required field (e.g. acme.com)</li>
+                            <li><strong>External ID Optional:</strong> You can provide an external ID for tracking purposes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="filter-group">
+                        <label for="domain" class="filter-label">
+                            <i class="fas fa-globe me-2 text-primary"></i>Company Domain (Required)
+                        </label>
+                        <input type="text" id="domain" name="domain" class="form-control" 
+                               placeholder="acme.com" required>
+                        <div class="form-text">
+                            <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                            Enter the company's domain without http:// or www (e.g., acme.com)
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="filter-group">
+                        <label for="external-id" class="filter-label">
+                            <i class="fas fa-tag me-2 text-secondary"></i>External ID (Optional)
+                        </label>
+                        <input type="text" id="external-id" name="external-id" class="form-control" 
+                               placeholder="company_123">
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1 text-info"></i>
+                            Optional tracking ID for your internal reference
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6 offset-md-3">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success enrichment-button">
+                            <i class="fas fa-magic me-2"></i>
+                            Enrich Company Data
+                        </button>
+                        <button type="button" id="reset-form" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-2"></i>
+                            Reset Form
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- CSV Upload Section -->
+    <div id="csv-input" class="input-section">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-upload me-2"></i>
+                    CSV File Upload
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="csv-upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="csv-file" class="form-label">Choose CSV File</label>
+                        <input type="file" id="csv-file" name="file" class="form-control" accept=".csv">
+                        <div class="form-text">
+                            CSV should contain columns: name, domain, website, industry, location, employee_count
+                        </div>
+                        </div>
+                        <!-- Domain column selector, hidden by default -->
+                        <select id="domain-column-select" style="display:none; margin-top:10px;">
+                            <option value="">Select domain column</option>
+                        </select>
+                        <span id="unique-domain-count" style="display:none; margin-left:10px; font-weight:bold; color:#007bff;"></span>                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <strong>CSV Format Example:</strong>
+                            <code>name,domain,website,industry,location,employee_count</code><br>
+                            <code>Acme Corp,acme.com,https://acme.com,Technology,San Francisco,100</code>
+                        </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-upload me-2"></i>
+                            Upload and Enrich
+                        </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Input Section -->
+    <div id="bulk-input" class="input-section">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Bulk Input
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="bulk-enrichment-form">
+                    <!-- API v2 Compliance Notice -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-info-circle me-3 mt-1"></i>
+                            <div>
+                                <strong>Surfe API v2 Requirements:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>Domain Required:</strong> Each company must have a valid domain (e.g. acme.com)</li>
+                                    <li><strong>External ID Optional:</strong> You can provide an external ID for tracking (optional)</li>
+                                    <li><strong>Line Matching:</strong> External IDs correspond to domains by line number</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bulk-domains" class="form-label">
+                                    <i class="fas fa-globe me-2 text-primary"></i>Company Domains (Required)
+                                </label>
+                                <textarea id="bulk-domains" name="domains" class="form-control" rows="12" 
+                                          placeholder="acme.com&#10;google.com&#10;microsoft.com&#10;apple.com" required></textarea>
+                                <div class="form-text">
+                                    <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                                    One domain per line. Each domain will be enriched with company data.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bulk-external-ids" class="form-label">
+                                    <i class="fas fa-tag me-2 text-secondary"></i>External IDs (Optional)
+                                </label>
+                                <textarea id="bulk-external-ids" name="external_ids" class="form-control" rows="12" 
+                                          placeholder="company_1&#10;company_2&#10;company_3&#10;company_4"></textarea>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1 text-info"></i>
+                                    Optional tracking IDs. Must match line-by-line with domains above.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-magic me-2"></i>
+                        Bulk Enrich Data
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Selection Status -->
+    <div class="alert alert-success" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-shield-alt me-3"></i>
+            <div>
+                <strong>Comprehensive Company Enrichment:</strong> 
+                This service leverages simple API management to provide detailed company information 
+                including employee data, financial metrics, technology stack, and industry insights.
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrichment Results -->
+    <div id="enrichment-results" class="results-section">
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-building-user"></i>
+            </div>
+            <h5 class="mb-3">Ready for Enrichment</h5>
+            <p class="mb-0">Choose an input method above and provide company data to enrich with comprehensive business information.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/company_enrichment.js') }}"></script>
+{% endblock %}

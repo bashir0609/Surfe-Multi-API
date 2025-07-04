@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}People Search - Surfe Multi API{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="fas fa-users me-3"></i>
+                    People Search
+                </h1>
+                <p class="text-muted mb-0">
+                    Find professionals with advanced filtering options using simple API management
+                </p>
+            </div>
+            <div>
+                <span class="badge bg-info">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Simple Key Selection
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="search-section">
+        <form id="people-search-form">
+            <div class="row">
+                <!-- Company Filters -->
+                <div class="col-lg-6">
+                    <h5 class="mb-3">
+                        <i class="fas fa-building me-2"></i>
+                        Company Filters
+                    </h5>
+                    
+                    <div class="filter-group">
+                        <label for="industries" class="filter-label">Industries</label>
+                        <select id="industries" name="industries" class="form-select" multiple>
+                            <option value="">Select industries...</option>
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="company-names" class="filter-label">Company Names</label>
+                        <input type="text" id="company-names" name="company-names" class="form-control" 
+                               placeholder="Company A, Company B, Company C...">
+                        <small class="form-text text-muted">Separate multiple companies with commas</small>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="company-countries" class="filter-label">Company Countries</label>
+                        <select id="company-countries" name="company-countries" class="form-select" multiple>
+                            <option value="">Select countries...</option>
+                        </select>
+                        <small class="form-text text-muted">Countries where companies are based</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="filter-group">
+                                <label for="employee-count-min" class="filter-label">Min Employees</label>
+                                <input type="number" id="employee-count-min" name="employee-count-min" 
+                                       class="form-control" placeholder="1" min="1">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="filter-group">
+                                <label for="employee-count-max" class="filter-label">Max Employees</label>
+                                <input type="number" id="employee-count-max" name="employee-count-max" 
+                                       class="form-control" placeholder="999999999" min="1">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="filter-group">
+                                <label for="revenue-min" class="filter-label">Min Revenue ($)</label>
+                                <input type="number" id="revenue-min" name="revenue-min" 
+                                       class="form-control" placeholder="1" min="1">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="filter-group">
+                                <label for="revenue-max" class="filter-label">Max Revenue ($)</label>
+                                <input type="number" id="revenue-max" name="revenue-max" 
+                                       class="form-control" placeholder="999999999" min="1">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Domain Include/Exclude Section -->
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-globe me-2"></i>
+                            Domain Filtering
+                        </label>
+                        
+                        <!-- Domain Filter Tabs -->
+                        <ul class="nav nav-pills nav-justified mb-3" id="domain-filter-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="include-domains-tab" data-bs-toggle="pill" 
+                                        data-bs-target="#include-domains-pane" type="button" role="tab">
+                                    <i class="fas fa-plus-circle me-1"></i>Include Domains
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="exclude-domains-tab" data-bs-toggle="pill" 
+                                        data-bs-target="#exclude-domains-pane" type="button" role="tab">
+                                    <i class="fas fa-minus-circle me-1"></i>Exclude Domains
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Domain Filter Content -->
+                        <div class="tab-content" id="domain-filter-content">
+                            <!-- Include Domains Tab -->
+                            <div class="tab-pane fade show active" id="include-domains-pane" role="tabpanel">
+                                <div class="mb-3">
+                                    <label for="include-domains-manual" class="form-label">Manual Entry</label>
+                                    <textarea id="include-domains-manual" name="include-domains-manual" 
+                                              class="form-control" rows="3" 
+                                              placeholder="company1.com&#10;company2.com&#10;company3.com"></textarea>
+                                    <small class="form-text text-muted">Enter one domain per line</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="include-domains-csv" class="form-label">
+                                        <i class="fas fa-file-csv me-1"></i>Upload CSV File
+                                    </label>
+                                    <input type="file" id="include-domains-csv" name="include-domains-csv" 
+                                           class="form-control" accept=".csv,.txt" />
+                                    <small class="form-text text-muted">CSV with domain column or plain text file</small>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="clear-include-domains" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-trash me-1"></i>Clear All
+                                    </button>
+                                    <span id="include-domains-count" class="badge bg-success">0 domains</span>
+                                </div>
+                            </div>
+
+                            <!-- Exclude Domains Tab -->
+                            <div class="tab-pane fade" id="exclude-domains-pane" role="tabpanel">
+                                <div class="mb-3">
+                                    <label for="exclude-domains-manual" class="form-label">Manual Entry</label>
+                                    <textarea id="exclude-domains-manual" name="exclude-domains-manual" 
+                                              class="form-control" rows="3" 
+                                              placeholder="spam-domain.com&#10;unwanted-company.com&#10;competitor.com"></textarea>
+                                    <small class="form-text text-muted">Enter one domain per line</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="exclude-domains-csv" class="form-label">
+                                        <i class="fas fa-file-csv me-1"></i>Upload CSV File
+                                    </label>
+                                    <input type="file" id="exclude-domains-csv" name="exclude-domains-csv" 
+                                           class="form-control" accept=".csv,.txt" />
+                                    <small class="form-text text-muted">CSV with domain column or plain text file</small>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="clear-exclude-domains" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-trash me-1"></i>Clear All
+                                    </button>
+                                    <span id="exclude-domains-count" class="badge bg-danger">0 domains</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- People Filters -->
+                <div class="col-lg-6">
+                    <h5 class="mb-3">
+                        <i class="fas fa-user me-2"></i>
+                        People Filters
+                    </h5>
+                    
+                    <div class="filter-group">
+                        <label for="seniorities" class="filter-label">Seniorities</label>
+                        <select id="seniorities" name="seniorities" class="form-select" multiple>
+                            <option value="">Select seniorities...</option>
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="departments" class="filter-label">Departments</label>
+                        <select id="departments" name="departments" class="form-select" multiple>
+                            <option value="">Select departments...</option>
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="people-countries" class="filter-label">People Countries</label>
+                        <select id="people-countries" name="people-countries" class="form-select" multiple>
+                            <option value="">Select countries...</option>
+                        </select>
+                        <small class="form-text text-muted">Countries where people are located</small>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="job-titles" class="filter-label">Job Titles</label>
+                        <input type="text" id="job-titles" name="job-titles" class="form-control" 
+                               placeholder="CEO, CTO, Marketing Manager...">
+                        <small class="form-text text-muted">Separate multiple titles with commas</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Configuration -->
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="filter-group">
+                        <label for="limit" class="filter-label">Results Limit</label>
+                        <select id="limit" name="limit" class="form-select">
+                            <option value="10">10 results</option>
+                            <option value="25">25 results</option>
+                            <option value="50">50 results</option>
+                            <option value="100">100 results</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="filter-group">
+                        <label for="people-per-company" class="filter-label">People per Company</label>
+                        <select id="people-per-company" name="people-per-company" class="form-select">
+                            <option value="1">1 person</option>
+                            <option value="2">2 people</option>
+                            <option value="3">3 people</option>
+                            <option value="5">5 people</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="filter-group w-100">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary search-button">
+                                <i class="fas fa-search me-2"></i>
+                                Search People
+                            </button>
+                            <button type="button" id="reset-form" class="btn btn-outline-secondary">
+                                <i class="fas fa-undo me-2"></i>
+                                Reset Form
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- API Selection Status -->
+    <div class="alert alert-info" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle me-3"></i>
+            <div>
+                <strong>Simple API Management:</strong> 
+                This search uses selected API key for all requests to ensure consistent behavior. 
+                Switch to different keys through the Settings page as needed.
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <div id="search-results" class="results-section">
+        <!-- Results will be populated here by JavaScript -->
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <h5 class="mb-3">Ready to Search</h5>
+            <p class="mb-0">Configure your filters above and click "Search People" to find professionals.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/people_search.js') }}?v=5&debug=1751363260"></script>
+{% endblock %}
