@@ -31,31 +31,36 @@ def search_companies():
 def fetch_all_companies_paginated(payload):
     """
     Fetches companies from the Surfe API with proper pagination,
-    respecting the requested limit.
+    respecting the requested limit and initial page token.
     """
     all_companies = []
-    page_token = ""
+    
+    # --- CORRECTION ---
+    # Use the pageToken from the initial payload if provided. This allows a search
+    # to be resumed from a specific page. Default to an empty string to start from the beginning.
+    page_token = payload.get("pageToken", "")
     
     # Get the desired limit from payload (default to 10 if not specified)
     desired_limit = payload.get("limit", 10)
     
-    # --- CORRECTION ---
-    # Make a shallow copy of the payload. It's crucial to remove the 'limit' key,
-    # as it's for our internal logic, not for the Surfe API. Sending an unknown
-    # parameter can cause a 500 error on the server.
+    # Make a shallow copy of the payload. It's crucial to remove parameters
+    # that are for our internal logic, not for the Surfe API.
     payload_copy = dict(payload)
     if 'limit' in payload_copy:
         del payload_copy['limit']
+    # Also remove pageToken, as the loop will now manage it directly.
+    if 'pageToken' in payload_copy:
+        del payload_copy['pageToken']
 
     # Loop until we have enough companies or the API runs out of results.
     while len(all_companies) < desired_limit:
+        # The loop now correctly uses the page_token, which was either
+        # set from the initial payload or from the previous API response.
         payload_copy["pageToken"] = page_token
         
-        # --- CORRECTION ---
         # Calculate how many more results we need and tell the API how many to fetch.
         # Most APIs use a 'pageSize' parameter for this. This is more efficient
         # than fetching a full default page and discarding results.
-        # We also cap it at a reasonable max (e.g., 100) as per typical API limits.
         remaining_needed = desired_limit - len(all_companies)
         payload_copy["pageSize"] = min(remaining_needed, 100)
 
