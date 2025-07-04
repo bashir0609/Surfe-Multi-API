@@ -149,18 +149,42 @@ def fetch_all_people_paginated(api_key, payload):
     }
     all_people = []
     page_token = ""
+    
+    # Get the desired limit from payload (default to 1 if not specified)
+    desired_limit = payload.get("limit", 1)
+    
     # Make a shallow copy of payload to avoid mutating the original dict
     payload_copy = dict(payload)
     while True:
         payload_copy["pageToken"] = page_token
+        
+        # Calculate how many more results we need
+        remaining_needed = desired_limit - len(all_people)
+        
+        # If we already have enough results, break
+        if remaining_needed <= 0:
+            break
+            
         # Use the 'json' parameter so requests sets headers and encoding automatically[9][10][11]
         response = requests.post(url, headers=headers, json=payload_copy, timeout=30)
         if response.status_code != 200:
             logger.error(f"Error: {response.status_code} - {response.text}")
             break  # Stop if quota is reached or any error occurs
+            
         data = response.json()
         people = data.get("people", [])
-        all_people.extend(people)
+        
+        if not people:
+            break  # Stop if no people returned
+            
+        # Add people but don't exceed the desired limit
+        people_to_add = people[:remaining_needed]
+        all_people.extend(people_to_add)
+        
+        # If we've reached our desired limit, stop
+        if len(all_people) >= desired_limit:
+            break
+        
         page_token = data.get("nextPageToken")
         if not page_token or not people:
             break  # Stop if no more pages or no people returned
