@@ -679,7 +679,7 @@
         const filename = `company_search_${timestamp}.${format}`;
         
         if (format === 'csv') {
-            SurfeApp.utils.exportToCsv(this.currentResults, filename);
+            SurfeApp.utils.exportToCsv(this.currentResults, filename, 'company');
         } else if (format === 'json') {
             SurfeApp.utils.exportToJson(this.currentResults, filename);
         }

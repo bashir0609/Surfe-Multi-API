@@ -725,7 +725,7 @@
         const filename = `people_enrichment_${timestamp}.${format}`;
 
         if (format === 'csv') {
-            SurfeApp.utils.exportToCsv(enrichmentResults, filename);
+            SurfeApp.utils.exportToCsv(enrichmentResults, filename, 'people');
         } else if (format === 'json') {
             SurfeApp.utils.exportToJson(enrichmentResults, filename);
         }

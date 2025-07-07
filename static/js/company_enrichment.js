@@ -1008,7 +1008,7 @@
         const filename = `company_enrichment_${timestamp}.${format}`;
 
         if (format === 'csv') {
-            SurfeApp.utils.exportToCsv(enrichmentResults, filename);
+            SurfeApp.utils.exportToCsv(enrichmentResults, filename, 'company');
         } else if (format === 'json') {
             SurfeApp.utils.exportToJson(enrichmentResults, filename);
         }

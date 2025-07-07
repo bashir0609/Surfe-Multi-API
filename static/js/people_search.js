@@ -558,13 +558,13 @@
         );
         
         const email = SurfeApp.utils.sanitizeHtml(person.email || '');
-        const linkedin = person.linkedInUrl || person.linkedin_url || person.linkedIn || '';
+        const PersonlinkedinUrl = person.linkedInUrl || person.linkedin_url || person.linkedIn || '';
         
         // Additional fields that might be available
         const location = SurfeApp.utils.sanitizeHtml(person.location || person.city || '');
         const country = SurfeApp.utils.sanitizeHtml(person.country || '');
-        const seniority = SurfeApp.utils.sanitizeHtml(person.seniority || '');
-        const department = SurfeApp.utils.sanitizeHtml(person.department || '');
+        const seniority = SurfeApp.utils.sanitizeHtml(person.seniorities ? person.seniorities.join(', ') : '');
+        const department = SurfeApp.utils.sanitizeHtml(person.departments ? person.departments.join(', ') : '');
         const companyDomain = SurfeApp.utils.sanitizeHtml(person.companyDomain || person.company_domain || '');
         const mobile = SurfeApp.utils.sanitizeHtml(person.mobile || person.phone || '');
         
@@ -630,9 +630,9 @@
                         </div>
                         
                         <div class="mt-3">
-                            ${linkedin ? `
-                                <a href="${linkedin}" target="_blank" class="btn btn-outline-primary btn-sm me-2">
-                                    <i class="fab fa-linkedin me-1"></i>LinkedIn
+                            ${PersonlinkedinUrl ? `
+                                <a href="${PersonlinkedinUrl}" target="_blank" class="btn btn-outline-primary btn-sm me-2">
+                                    <i class="fab fa-linkedin me-1"></i>Person linkedin Url
                                 </a>
                             ` : ''}
                             ${email ? `
@@ -690,12 +690,13 @@
             SurfeApp.ui.showToast('No results to export', 'error');
             return;
         }
-        
+
         const timestamp = new Date().toISOString().split('T')[0];
         const filename = `people_search_${timestamp}.${format}`;
-        
+
         if (format === 'csv') {
-            SurfeApp.utils.exportToCsv(this.currentResults, filename);
+            // This now includes the 'people' type
+            SurfeApp.utils.exportToCsv(this.currentResults, filename, 'people');
         } else if (format === 'json') {
             SurfeApp.utils.exportToJson(this.currentResults, filename);
         }
