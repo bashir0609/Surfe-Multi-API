@@ -510,7 +510,7 @@
         );
         
         const location = SurfeApp.utils.sanitizeHtml(
-            company.location || company.headquarters || company.city || company.country || 'Unknown Location'
+            company.location || company.headquarters || company.city || company.country || company.countries || 'Unknown Location'
         );
         
         const employeeCount = (company.employee_count || company.employeeCount || company.employees) ? 

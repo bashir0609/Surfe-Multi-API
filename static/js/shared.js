@@ -281,13 +281,13 @@ SurfeApp.utils = {
     /**
      * Export data to CSV file
      */
-    exportToCsv: function (data, filename = 'export.csv') {
+    exportToCsv: function (data, filename = 'export.csv', type = 'people') {
         if (!data || data.length === 0) {
             SurfeApp.ui.showToast('No data to export', 'warning');
             return;
         }
 
-        const csvContent = this.convertToCSV(data, 'people'); // Default to 'people' type
+        const csvContent = this.convertToCSV(data, type);
         this.downloadFile(csvContent, filename, 'text/csv');
 
         SurfeApp.ui.showToast(`Results exported as ${filename}`, 'success');
@@ -310,39 +310,60 @@ SurfeApp.utils = {
 
     // In SurfeApp.utils
     csvHeaderMaps: {
-        // ======== People CSV Headers ========
+        // ======== People Search CSV Headers ========
         people: {
-            // --- Main Person Details
             'firstName': 'First Name',
             'lastName': 'Last Name',
             'jobTitle': 'Job Title',
-            'linkedInUrl': 'Person LinkedIn URL',
-            'location': 'Location',
-            'country': 'Country',
-            // --- Contact Info (pulling the first email/phone)
-            'emails.0.email': 'Email',
-            'emails.0.validationStatus': 'Email Status',
-            'mobilePhones.0.mobilePhone': 'Mobile Phone',
-            'mobilePhones.0.confidenceScore': 'Phone Confidence',
-            // --- Current Company & Role
+            'linkedInUrl': 'LinkedIn URL',
             'companyName': 'Company Name',
-            'companyDomain': 'Company Domain',
+            'companyDomain': 'companyDomain',
+            'country': 'Country',
             'departments': 'Departments', // This will be comma-separated
-            'seniorities': 'Seniorities', // This will be comma-separated
-            // --- Job History (pulling the first/most recent job)
-            'jobHistory.0.jobTitle': 'Recent Job Title',
-            'jobHistory.0.companyName': 'Recent Company Name',
-            'jobHistory.0.startDate': 'Recent Job Start Date',
-            'jobHistory.0.endDate': 'Recent Job End Date',
-            // --- System IDs
-            'externalID': 'External ID',
-            'enrichmentID': 'Enrichment ID',
-            'status': 'Person Status'
+            'seniorities': 'Seniorities' // This will be comma-separated
         },
 
-        // ======== Company CSV Headers ========
+        // ======== People Enrichment CSV Headers ========
+        people_enrichment: {
+            'firstName': 'First Name',
+            'lastName': 'Last Name',
+            'jobTitle': 'Job Title',
+            'linkedInUrl': 'LinkedIn URL',
+            'location': 'Location',
+            'country': 'Country',
+            'emails.0.email': 'Email',
+            'emails.0.validationStatus': 'Email Status',
+            'mobilePhones.0.mobilePhone': 'Mobile Phone 1',
+            'mobilePhones.1.mobilePhone': 'Mobile Phone 2',
+            'mobilePhones.2.mobilePhone': 'Mobile Phone 3',
+            'mobilePhones.0.confidenceScore': 'Phone 1 Confidence',
+            'mobilePhones.1.confidenceScore': 'Phone 2 Confidence',
+            'mobilePhones.2.confidenceScore': 'Phone 3 Confidence',
+            'companyName': 'Company Name',
+            'companyDomain': 'companyDomain',
+            'departments': 'Departments',
+            'seniorities': 'Seniorities',
+            'jobHistory.0.jobTitle': 'Previous Job Title',
+            'jobHistory.0.companyName': 'Previous Company',
+            'jobHistory.0.startDate': 'Previous Job Start',
+            'jobHistory.0.endDate': 'Previous Job End',
+            'externalID': 'External ID',
+            'status': 'Status'
+        },
+
+        // ======== Company Search CSV Headers ========
         company: {
-            // --- Core Company Info
+            'name': 'Company Name',
+            'domain': 'Domain',
+            'employeeCount': 'Employee Count',
+            'revenue': 'Revenue',
+            'industries': 'Industries',
+            'countries': 'Countries',
+            'companyDomains': 'companyDomain'
+        },
+
+        // ======== Company Enrichment CSV Headers ========
+        company_enrichment: {
             'name': 'Company Name',
             'linkedInURL': 'Company LinkedIn URL',
             'description': 'Description',
@@ -351,42 +372,57 @@ SurfeApp.utils = {
             'employeeCount': 'Employee Count',
             'founded': 'Founded Year',
             'revenue': 'Revenue',
-            'keywords': 'Keywords', // This will be comma-separated
-            // --- Location
+            'keywords': 'Keywords',
             'hqAddress': 'HQ Address',
             'hqCountry': 'HQ Country',
-            // --- Online Presence
-            'websites.0': 'Website',
-            'phones.0': 'Phone',
-            'digitalPresence.0.name': 'Digital Presence Site',
-            'digitalPresence.0.url': 'Digital Presence URL',
-            // --- Corporate Info
+            'companyDomains':  'companyDomain',
+            'websites': 'Website',
+            'phones.0': 'Phone 1',
+            'phones.1': 'Phone 2',
+            'phones.2': 'Phone 3',
+            'followersCountLinkedi': 'LinkedIn Followers',
             'isPublic': 'Is Public',
             'parentOrganization.name': 'Parent Organization',
             'parentOrganization.website': 'Parent Organization Website',
-            // --- Financials
             'ipo.date': 'IPO Date',
             'ipo.sharePrice': 'IPO Share Price',
+            'ipo.sharePriceCurrency': 'IPO Currency',
             'stocks.0.ticker': 'Stock Ticker',
             'stocks.0.exchange': 'Stock Exchange',
             'fundingRounds.0.name': 'Last Funding Round',
             'fundingRounds.0.amount': 'Last Funding Amount',
+            'fundingRounds.0.amountCurrency': 'Funding Currency',
             'fundingRounds.0.announcedDate': 'Last Funding Date',
-            // --- System IDs
+            'digitalPresence.0.name': 'Digital Presence Site',
+            'digitalPresence.0.url': 'Digital Presence URL',
             'externalID': 'External ID',
             'status': 'Company Status'
         }
     },
 
-    // Add this helper function to SurfeApp.utils
-    getNestedValue: function (obj, path) {
-        // If the path is a simple array join (e.g., 'departments')
-        if (Array.isArray(obj[path])) {
+        // Add this helper function to SurfeApp.utils
+        getNestedValue: function (obj, path) {
+        // Handle arrays that should be joined (removed 'phones' from this list)
+        if (['keywords', 'websites', 'industries', 'countries', 'departments', 'seniorities'].includes(path) && Array.isArray(obj[path])) {
             return obj[path].join(', ');
         }
 
-        // Otherwise, traverse the path
-        const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
+        // Handle array index access (e.g., 'phones.0', 'emails.0.email')
+        if (path.includes('.')) {
+            return path.split('.').reduce((acc, part) => {
+                if (acc === null || acc === undefined) return '';
+
+                if (!isNaN(part)) {
+                    const index = parseInt(part);
+                    return Array.isArray(acc) && acc[index] ? acc[index] : '';
+                }
+
+                return acc[part];
+            }, obj);
+        }
+
+        // Simple property access
+        const value = obj[path];
         return value === undefined || value === null ? '' : value;
     },
 
@@ -457,7 +493,7 @@ SurfeApp.utils = {
             if (key === 'keywords') {
                 return value.join(', ');
             }
-            
+
             // For other arrays, return the first item.
             // (Emails & Phones are handled before this function is called).
             if (value.length > 0) {

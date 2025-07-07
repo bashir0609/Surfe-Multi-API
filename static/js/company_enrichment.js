@@ -852,7 +852,7 @@
         const founded = company.founded || 'N/A';
 
         // Correctly handle array fields by joining them into clean strings
-        const website = (company.websites && company.websites.length > 0) ? company.websites[0] : '';
+        const website = "https://" + (company.websites && company.websites.length > 0) ? company.websites[0] : '';
         const phones = (company.phones && company.phones.length > 0) ? company.phones.join(' / ') : '';
         const keywords = (company.keywords && company.keywords.length > 0) ? company.keywords.slice(0, 5).join(', ') : ''; // Show first 5 keywords
 
@@ -1004,11 +1004,15 @@
             return;
         }
 
+        // DEBUG: Log the actual data structure
+        console.log('🔍 Company data structure:', enrichmentResults[0]);
+        console.log('🔍 Available fields:', Object.keys(enrichmentResults[0]));
+
         const timestamp = new Date().toISOString().split('T')[0];
         const filename = `company_enrichment_${timestamp}.${format}`;
 
         if (format === 'csv') {
-            SurfeApp.utils.exportToCsv(enrichmentResults, filename, 'company');
+            SurfeApp.utils.exportToCsv(enrichmentResults, filename, 'company_enrichment');
         } else if (format === 'json') {
             SurfeApp.utils.exportToJson(enrichmentResults, filename);
         }
