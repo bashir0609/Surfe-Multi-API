@@ -4,173 +4,226 @@ from database.supabase_client import supabase_client
 
 class SimpleAPIManager:
     """
-    Enhanced API Manager that uses Supabase database for API key storage
-    Falls back to environment variables if database is unavailable
+    Surfe API Manager - User selects specific Surfe API key to use
+    No auto-rotation - respects user's manual key selection
     """
     
     def __init__(self):
-        """Initialize API Manager"""
-        self.fallback_keys = self._load_env_fallback_keys()
-        self.current_user_email = None  # Will be set by request context
+        """Initialize Surfe API Manager"""
+        self.fallback_keys = self._load_env_surfe_keys()
+        self.current_user_email = None
+        self.service_name = 'surfe'
     
     def set_current_user(self, user_email: str):
         """Set the current user context for API key retrieval"""
         self.current_user_email = user_email
     
-    def _load_env_fallback_keys(self) -> Dict[str, str]:
-        """Load fallback API keys from environment variables"""
-        return {
-            'apollo': os.getenv('APOLLO_API_KEY'),
-            'clearbit': os.getenv('CLEARBIT_API_KEY'),
-            'hunter': os.getenv('HUNTER_API_KEY'),
-            'peopledatalabs': os.getenv('PEOPLEDATALABS_API_KEY'),
-            'proxycurl': os.getenv('PROXYCURL_API_KEY'),
-            'zoominfo': os.getenv('ZOOMINFO_API_KEY'),
-            'leadiq': os.getenv('LEADIQ_API_KEY'),
-            'lusha': os.getenv('LUSHA_API_KEY')
-        }
+    def _load_env_surfe_keys(self) -> Dict[str, str]:
+        """Load all Surfe API keys from environment variables"""
+        surfe_keys = {}
+        
+        # Load from numbered environment variables: SURFE_API_KEY_1, SURFE_API_KEY_2, etc.
+        for i in range(1, 25):  # Support up to 24 keys
+            key = os.getenv(f'SURFE_API_KEY_{i}')
+            if key:
+                surfe_keys[f'surfe_key_{i}'] = key.strip()
+        
+        # Also check for single key
+        single_key = os.getenv('SURFE_API_KEY')
+        if single_key:
+            surfe_keys['surfe_key_default'] = single_key.strip()
+            
+        return surfe_keys
     
-    def get_api_key(self, service: str, user_email: str = None) -> Optional[str]:
+    def get_selected_api_key(self, user_email: str = None) -> Optional[str]:
         """
-        Get API key for a service, prioritizing user's database keys
+        Get the user's currently selected Surfe API key
         
         Args:
-            service: The API service name (apollo, clearbit, etc.)
             user_email: User email (uses current_user_email if not provided)
             
         Returns:
-            API key string or None if not found
+            Selected Surfe API key string or None if not found
         """
         target_user = user_email or self.current_user_email
         
-        # Try to get from database first
-        if target_user:
-            try:
-                db_key = supabase_client.get_active_api_key(target_user, service.lower())
-                if db_key:
-                    return db_key
-            except Exception as e:
-                print(f"Database error getting API key for {service}: {e}")
+        if not target_user:
+            # No user context, return first available fallback key
+            return list(self.fallback_keys.values())[0] if self.fallback_keys else None
         
-        # Fallback to environment variables
-        return self.fallback_keys.get(service.lower())
+        try:
+            # Get user's selected key from database
+            user_keys = supabase_client.get_user_api_keys(target_user)
+            
+            # Find the selected/active Surfe key
+            for key_data in user_keys:
+                if (key_data.get('service') == 'surfe' and 
+                    key_data.get('is_active') and 
+                    key_data.get('is_selected', False)):
+                    return key_data.get('api_key')
+            
+            # If no key is marked as selected, get the first active one
+            for key_data in user_keys:
+                if key_data.get('service') == 'surfe' and key_data.get('is_active'):
+                    return key_data.get('api_key')
+                    
+        except Exception as e:
+            print(f"Database error getting selected Surfe key: {e}")
+        
+        # Fallback to environment keys (return first available)
+        return list(self.fallback_keys.values())[0] if self.fallback_keys else None
     
-    def get_available_services(self, user_email: str = None) -> List[Dict[str, str]]:
-        """
-        Get list of available services with their key status
-        
-        Returns:
-            List of dictionaries with service info
-        """
+    def get_all_available_keys(self, user_email: str = None) -> Dict:
+        """Get all available Surfe keys for user selection"""
         target_user = user_email or self.current_user_email
-        services = []
+        
+        result = {
+            'user_keys': [],
+            'system_keys': [],
+            'selected_key_id': None
+        }
         
         # Get user's database keys
-        user_keys = {}
         if target_user:
             try:
-                db_keys = supabase_client.get_user_api_keys(target_user)
-                for key_data in db_keys:
-                    if key_data.get('is_active'):
-                        user_keys[key_data['service']] = key_data
+                user_keys = supabase_client.get_user_api_keys(target_user)
+                surfe_keys = [k for k in user_keys if k.get('service') == 'surfe']
+                
+                # Don't expose actual API keys, just metadata
+                for key in surfe_keys:
+                    key_info = {
+                        'id': key.get('id'),
+                        'key_name': key.get('key_name'),
+                        'is_active': key.get('is_active'),
+                        'is_selected': key.get('is_selected', False),
+                        'created_at': key.get('created_at'),
+                        'last_4_chars': key.get('api_key', '')[-4:] if key.get('api_key') else '',
+                        'source': 'user'
+                    }
+                    result['user_keys'].append(key_info)
+                    
+                    if key.get('is_selected'):
+                        result['selected_key_id'] = key.get('id')
+                        
             except Exception as e:
-                print(f"Error getting user API keys: {e}")
+                print(f"Error getting user keys: {e}")
         
-        # Check each service
-        for service_name in self.fallback_keys.keys():
-            has_db_key = service_name in user_keys
-            has_env_key = bool(self.fallback_keys.get(service_name))
-            
-            service_info = {
-                'name': service_name,
-                'display_name': service_name.title(),
-                'has_user_key': has_db_key,
-                'has_fallback_key': has_env_key,
-                'key_source': 'database' if has_db_key else ('environment' if has_env_key else 'none'),
-                'key_name': user_keys[service_name].get('key_name', '') if has_db_key else ''
+        # Add system/environment keys
+        for key_name, key_value in self.fallback_keys.items():
+            system_key = {
+                'id': key_name,
+                'key_name': key_name.replace('_', ' ').title(),
+                'is_active': True,
+                'is_selected': False,
+                'last_4_chars': key_value[-4:] if key_value else '',
+                'source': 'system'
             }
-            services.append(service_info)
+            result['system_keys'].append(system_key)
         
-        return services
+        return result
     
-    def add_user_api_key(self, user_email: str, service: str, api_key: str, key_name: str = None) -> Dict:
-        """Add a new API key for a user"""
+    def select_api_key(self, user_email: str, key_id: int = None, system_key_name: str = None) -> bool:
+        """
+        Select which API key the user wants to use
+        
+        Args:
+            user_email: User's email
+            key_id: Database key ID (for user's personal keys)
+            system_key_name: System key name (for environment keys)
+            
+        Returns:
+            True if selection was successful
+        """
         try:
-            return supabase_client.add_api_key(user_email, service.lower(), api_key, key_name)
+            # First, deselect all current keys for this user
+            user_keys = supabase_client.get_user_api_keys(user_email)
+            for key in user_keys:
+                if key.get('service') == 'surfe' and key.get('is_selected'):
+                    supabase_client.update_api_key(key['id'], {'is_selected': False})
+            
+            # If selecting a user's personal key
+            if key_id:
+                return bool(supabase_client.update_api_key(key_id, {'is_selected': True}))
+            
+            # If selecting a system key, store the selection
+            if system_key_name:
+                # Create a record to track system key selection
+                selection_data = {
+                    'user_email': user_email,
+                    'service': 'surfe',
+                    'api_key': f'SYSTEM_KEY:{system_key_name}',
+                    'key_name': f'System: {system_key_name}',
+                    'is_active': True,
+                    'is_selected': True,
+                    'is_system_key': True
+                }
+                return bool(supabase_client.add_api_key(user_email, 'surfe', selection_data['api_key'], selection_data['key_name']))
+            
+            return False
+            
         except Exception as e:
-            print(f"Error adding API key: {e}")
+            print(f"Error selecting API key: {e}")
+            return False
+    
+    def add_surfe_key(self, user_email: str, api_key: str, key_name: str = None) -> Dict:
+        """Add a new personal Surfe API key for a user"""
+        try:
+            if not key_name:
+                existing_count = len([k for k in supabase_client.get_user_api_keys(user_email) if k.get('service') == 'surfe'])
+                key_name = f"My Surfe Key #{existing_count + 1}"
+            
+            return supabase_client.add_api_key(user_email, 'surfe', api_key, key_name)
+        except Exception as e:
+            print(f"Error adding Surfe key: {e}")
             return {}
     
-    def update_user_api_key(self, key_id: int, updates: Dict) -> Dict:
-        """Update an existing API key"""
+    def update_surfe_key(self, key_id: int, updates: Dict) -> Dict:
+        """Update an existing Surfe API key"""
         try:
+            # Don't allow updating selection status through this method
+            if 'is_selected' in updates:
+                del updates['is_selected']
             return supabase_client.update_api_key(key_id, updates)
         except Exception as e:
-            print(f"Error updating API key: {e}")
+            print(f"Error updating Surfe key: {e}")
             return {}
     
-    def delete_user_api_key(self, key_id: int, user_email: str) -> bool:
-        """Delete a user's API key"""
+    def delete_surfe_key(self, key_id: int, user_email: str) -> bool:
+        """Delete a user's Surfe API key"""
         try:
             return supabase_client.delete_api_key(key_id, user_email)
         except Exception as e:
-            print(f"Error deleting API key: {e}")
+            print(f"Error deleting Surfe key: {e}")
             return False
     
-    def get_user_api_keys(self, user_email: str) -> List[Dict]:
-        """Get all API keys for a user"""
-        try:
-            return supabase_client.get_user_api_keys(user_email)
-        except Exception as e:
-            print(f"Error getting user API keys: {e}")
-            return []
-    
-    def test_api_key(self, service: str, api_key: str) -> Dict:
-        """
-        Test if an API key is valid by making a simple request
-        
-        Returns:
-            Dictionary with 'valid' boolean and 'message' string
-        """
-        # Basic validation - you can enhance this with actual API calls
+    def test_surfe_key(self, api_key: str) -> Dict:
+        """Test if a Surfe API key is valid"""
         if not api_key or len(api_key.strip()) < 10:
             return {'valid': False, 'message': 'API key too short'}
         
-        # Service-specific validation patterns
-        service_patterns = {
-            'apollo': lambda k: k.startswith('apollo_'),
-            'clearbit': lambda k: len(k) == 32,
-            'hunter': lambda k: len(k) >= 20,
-            'peopledatalabs': lambda k: len(k) >= 30,
-            'proxycurl': lambda k: len(k) >= 20,
-            'zoominfo': lambda k: len(k) >= 20,
-            'leadiq': lambda k: len(k) >= 20,
-            'lusha': lambda k: len(k) >= 20
-        }
+        if len(api_key) < 20:
+            return {'valid': False, 'message': 'Surfe API key appears too short'}
         
-        validator = service_patterns.get(service.lower())
-        if validator and not validator(api_key):
-            return {'valid': False, 'message': f'Invalid {service} API key format'}
-        
-        return {'valid': True, 'message': 'API key format appears valid'}
+        # TODO: Make actual API call to Surfe to test the key
+        return {'valid': True, 'message': 'Surfe API key format appears valid'}
     
-    def log_api_usage(self, service: str, endpoint: str, user_email: str = None, 
-                     request_data: Dict = None, response_data: Dict = None,
-                     status_code: int = 200, processing_time: float = 0):
-        """Log API usage to database"""
+    def log_surfe_usage(self, endpoint: str, user_email: str = None, 
+                       request_data: Dict = None, response_data: Dict = None,
+                       status_code: int = 200, processing_time: float = 0):
+        """Log Surfe API usage to database"""
         target_user = user_email or self.current_user_email
         
         if target_user:
             try:
                 supabase_client.log_api_request(
-                    target_user, service, endpoint, request_data, 
+                    target_user, 'surfe', endpoint, request_data, 
                     response_data, status_code, processing_time
                 )
             except Exception as e:
-                print(f"Error logging API usage: {e}")
+                print(f"Error logging Surfe usage: {e}")
     
-    def get_user_usage_stats(self, user_email: str = None, days: int = 30) -> Dict:
-        """Get usage statistics for a user"""
+    def get_usage_stats(self, user_email: str = None, days: int = 30) -> Dict:
+        """Get Surfe usage statistics for a user"""
         target_user = user_email or self.current_user_email
         
         if target_user:
