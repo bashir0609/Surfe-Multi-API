@@ -1,223 +1,185 @@
-"""
-Simple API Key Manager for Vercel Environment
-Replaces the complex rotation system with simple key selection
-"""
 import os
-import logging
-from typing import Dict, List, Optional
-from dataclasses import dataclass
-from datetime import datetime
+from typing import Dict, Optional, List
+from database.supabase_client import supabase_client
 
-logger = logging.getLogger(__name__)
-
-@dataclass
-class ApiKey:
-    """Simple API key representation"""
-    name: str
-    key: str
-    enabled: bool = True
-    selected: bool = False
-    last_used: Optional[datetime] = None
-    usage_count: int = 0
-
-class SimpleApiManager:
-    """Simple API key manager without rotation"""
+class SimpleAPIManager:
+    """
+    Enhanced API Manager that uses Supabase database for API key storage
+    Falls back to environment variables if database is unavailable
+    """
     
     def __init__(self):
-        self.keys: Dict[str, ApiKey] = {}
-        self.selected_key: Optional[str] = None
-        self.dynamic_keys: Dict[str, ApiKey] = {}  # Keys added dynamically via UI
-        self.load_keys_from_env()
+        """Initialize API Manager"""
+        self.fallback_keys = self._load_env_fallback_keys()
+        self.current_user_email = None  # Will be set by request context
     
-    def add_dynamic_key(self, key_name: str, api_key: str) -> bool:
-        """Add a new API key dynamically via UI"""
-        if key_name in self.keys or key_name in self.dynamic_keys:
-            return False  # Key already exists
-        
-        dynamic_key = ApiKey(
-            name=key_name,
-            key=api_key,
-            enabled=True,
-            selected=len(self.keys) + len(self.dynamic_keys) == 0  # First key is selected
-        )
-        
-        self.dynamic_keys[key_name] = dynamic_key
-        self._update_combined_keys()
-        
-        if len(self.keys) == 1:  # First key added
-            self.selected_key = key_name
-            
-        logger.info(f"Added dynamic API key: {key_name} (...{api_key[-10:]})")
-        return True
+    def set_current_user(self, user_email: str):
+        """Set the current user context for API key retrieval"""
+        self.current_user_email = user_email
     
-    def remove_dynamic_key(self, key_name: str) -> bool:
-        """Remove a dynamically added API key"""
-        if key_name in self.dynamic_keys:
-            del self.dynamic_keys[key_name]
-            self._update_combined_keys()
-            
-            # If this was the selected key, select another
-            if self.selected_key == key_name:
-                self._select_first_enabled_key()
-                
-            logger.info(f"Removed dynamic API key: {key_name}")
-            return True
-        return False
-    
-    def _update_combined_keys(self):
-        """Update the combined keys dict with both environment and dynamic keys"""
-        self.keys.clear()
-        # Add environment keys first
-        env_keys = self._load_env_keys()
-        self.keys.update(env_keys)
-        # Add dynamic keys
-        self.keys.update(self.dynamic_keys)
-
-    def load_keys_from_env(self):
-        """Load API keys from Vercel environment variables"""
-        env_keys = self._load_env_keys()
-        self.keys.clear()
-        if env_keys:
-            self.keys.update(env_keys)
-        if self.dynamic_keys:
-            self.keys.update(self.dynamic_keys)  # Keep dynamic keys
-        
-        if self.selected_key and self.selected_key not in self.keys:
-            self.selected_key = None
-        
-        if not self.selected_key:
-            self._select_first_enabled_key()
-    
-    def _load_env_keys(self) -> Dict[str, ApiKey]:
-        """Load environment keys and return them"""
-        env_keys = {}
-        
-        # Common environment variable patterns for Surfe API keys
-        env_patterns = [
-            'SURFE_API_KEY',
-            'SURFE_API_KEY_1',
-            'SURFE_API_KEY_2', 
-            'SURFE_API_KEY_3',
-            'SURFE_API_KEY_4',
-            'SURFE_API_KEY_5',
-            'SURFE_API_KEY_6',
-            'SURFE_API_KEY_7',
-            'SURFE_API_KEY_8',
-            'SURFE_API_KEY_9',
-            'SURFE_API_KEY_10',
-            'SURFE_KEY_1',
-            'SURFE_KEY_2',
-            'SURFE_KEY_3',
-            'API_KEY_SURFE',
-            'SURFE_TOKEN'
-        ]
-        
-        keys_found = 0
-        for pattern in env_patterns:
-            key_value = os.environ.get(pattern)
-            if key_value and key_value.strip():
-                key_name = pattern
-                api_key = ApiKey(
-                    name=key_name,
-                    key=key_value.strip(),
-                    enabled=True,
-                    selected=(keys_found == 0)  # First key is selected by default
-                )
-                env_keys[key_name] = api_key
-                keys_found += 1
-                logger.info(f"Loaded API key: {key_name} (...{key_value[-10:]})")
-        
-        if keys_found == 0:
-            logger.warning("No Surfe API keys found in environment variables")
-        else:
-            logger.info(f"Loaded {keys_found} API keys from environment")
-        
-        return env_keys
-    
-    def get_selected_key(self) -> Optional[str]:
-        """Get the currently selected API key"""
-        if self.selected_key and self.selected_key in self.keys:
-            key_obj = self.keys[self.selected_key]
-            if key_obj.enabled:
-                # Update usage statistics
-                key_obj.last_used = datetime.utcnow()
-                key_obj.usage_count += 1
-                return key_obj.key
-        return None
-    
-    def select_key(self, key_name: str) -> bool:
-        """Select a specific API key"""
-        if key_name in self.keys and self.keys[key_name].enabled:
-            # Deselect all other keys
-            for key in self.keys.values():
-                key.selected = False
-            
-            # Select the specified key
-            self.keys[key_name].selected = True
-            self.selected_key = key_name
-            logger.info(f"Selected API key: {key_name}")
-            return True
-        return False
-    
-    def enable_key(self, key_name: str) -> bool:
-        """Enable a specific API key"""
-        if key_name in self.keys:
-            self.keys[key_name].enabled = True
-            logger.info(f"Enabled API key: {key_name}")
-            return True
-        return False
-    
-    def disable_key(self, key_name: str) -> bool:
-        """Disable a specific API key"""
-        if key_name in self.keys:
-            self.keys[key_name].enabled = False
-            # If this was the selected key, select another enabled key
-            if self.selected_key == key_name:
-                self._select_first_enabled_key()
-            logger.info(f"Disabled API key: {key_name}")
-            return True
-        return False
-    
-    def _select_first_enabled_key(self):
-        """Select the first enabled key as default"""
-        for key_name, key_obj in self.keys.items():
-            if key_obj.enabled:
-                self.select_key(key_name)
-                return
-        self.selected_key = None
-    
-    def get_all_keys(self) -> List[Dict]:
-        """Get all keys with their status"""
-        return [
-            {
-                'name': key_obj.name,
-                'key_suffix': key_obj.key[-10:] if len(key_obj.key) >= 5 else key_obj.key,
-                'enabled': key_obj.enabled,
-                'selected': key_obj.selected,
-                'last_used': key_obj.last_used.isoformat() if key_obj.last_used else None,
-                'usage_count': key_obj.usage_count
-            }
-            for key_obj in self.keys.values()
-        ]
-    
-    def get_stats(self) -> Dict:
-        """Get simple statistics"""
-        total_keys = len(self.keys)
-        enabled_keys = sum(1 for key in self.keys.values() if key.enabled)
-        selected_key_name = self.selected_key
-        
-        # Calculate system health (percentage of enabled keys)
-        system_health = (enabled_keys / total_keys * 100) if total_keys > 0 else 0
-        
+    def _load_env_fallback_keys(self) -> Dict[str, str]:
+        """Load fallback API keys from environment variables"""
         return {
-            'total_keys': total_keys,
-            'enabled_keys': enabled_keys,
-            'disabled_keys': total_keys - enabled_keys,
-            'selected_key': selected_key_name,
-            'has_valid_selection': bool(self.get_selected_key()),
-            'system_health': system_health,
-            'keys': self.get_all_keys()
+            'apollo': os.getenv('APOLLO_API_KEY'),
+            'clearbit': os.getenv('CLEARBIT_API_KEY'),
+            'hunter': os.getenv('HUNTER_API_KEY'),
+            'peopledatalabs': os.getenv('PEOPLEDATALABS_API_KEY'),
+            'proxycurl': os.getenv('PROXYCURL_API_KEY'),
+            'zoominfo': os.getenv('ZOOMINFO_API_KEY'),
+            'leadiq': os.getenv('LEADIQ_API_KEY'),
+            'lusha': os.getenv('LUSHA_API_KEY')
         }
+    
+    def get_api_key(self, service: str, user_email: str = None) -> Optional[str]:
+        """
+        Get API key for a service, prioritizing user's database keys
+        
+        Args:
+            service: The API service name (apollo, clearbit, etc.)
+            user_email: User email (uses current_user_email if not provided)
+            
+        Returns:
+            API key string or None if not found
+        """
+        target_user = user_email or self.current_user_email
+        
+        # Try to get from database first
+        if target_user:
+            try:
+                db_key = supabase_client.get_active_api_key(target_user, service.lower())
+                if db_key:
+                    return db_key
+            except Exception as e:
+                print(f"Database error getting API key for {service}: {e}")
+        
+        # Fallback to environment variables
+        return self.fallback_keys.get(service.lower())
+    
+    def get_available_services(self, user_email: str = None) -> List[Dict[str, str]]:
+        """
+        Get list of available services with their key status
+        
+        Returns:
+            List of dictionaries with service info
+        """
+        target_user = user_email or self.current_user_email
+        services = []
+        
+        # Get user's database keys
+        user_keys = {}
+        if target_user:
+            try:
+                db_keys = supabase_client.get_user_api_keys(target_user)
+                for key_data in db_keys:
+                    if key_data.get('is_active'):
+                        user_keys[key_data['service']] = key_data
+            except Exception as e:
+                print(f"Error getting user API keys: {e}")
+        
+        # Check each service
+        for service_name in self.fallback_keys.keys():
+            has_db_key = service_name in user_keys
+            has_env_key = bool(self.fallback_keys.get(service_name))
+            
+            service_info = {
+                'name': service_name,
+                'display_name': service_name.title(),
+                'has_user_key': has_db_key,
+                'has_fallback_key': has_env_key,
+                'key_source': 'database' if has_db_key else ('environment' if has_env_key else 'none'),
+                'key_name': user_keys[service_name].get('key_name', '') if has_db_key else ''
+            }
+            services.append(service_info)
+        
+        return services
+    
+    def add_user_api_key(self, user_email: str, service: str, api_key: str, key_name: str = None) -> Dict:
+        """Add a new API key for a user"""
+        try:
+            return supabase_client.add_api_key(user_email, service.lower(), api_key, key_name)
+        except Exception as e:
+            print(f"Error adding API key: {e}")
+            return {}
+    
+    def update_user_api_key(self, key_id: int, updates: Dict) -> Dict:
+        """Update an existing API key"""
+        try:
+            return supabase_client.update_api_key(key_id, updates)
+        except Exception as e:
+            print(f"Error updating API key: {e}")
+            return {}
+    
+    def delete_user_api_key(self, key_id: int, user_email: str) -> bool:
+        """Delete a user's API key"""
+        try:
+            return supabase_client.delete_api_key(key_id, user_email)
+        except Exception as e:
+            print(f"Error deleting API key: {e}")
+            return False
+    
+    def get_user_api_keys(self, user_email: str) -> List[Dict]:
+        """Get all API keys for a user"""
+        try:
+            return supabase_client.get_user_api_keys(user_email)
+        except Exception as e:
+            print(f"Error getting user API keys: {e}")
+            return []
+    
+    def test_api_key(self, service: str, api_key: str) -> Dict:
+        """
+        Test if an API key is valid by making a simple request
+        
+        Returns:
+            Dictionary with 'valid' boolean and 'message' string
+        """
+        # Basic validation - you can enhance this with actual API calls
+        if not api_key or len(api_key.strip()) < 10:
+            return {'valid': False, 'message': 'API key too short'}
+        
+        # Service-specific validation patterns
+        service_patterns = {
+            'apollo': lambda k: k.startswith('apollo_'),
+            'clearbit': lambda k: len(k) == 32,
+            'hunter': lambda k: len(k) >= 20,
+            'peopledatalabs': lambda k: len(k) >= 30,
+            'proxycurl': lambda k: len(k) >= 20,
+            'zoominfo': lambda k: len(k) >= 20,
+            'leadiq': lambda k: len(k) >= 20,
+            'lusha': lambda k: len(k) >= 20
+        }
+        
+        validator = service_patterns.get(service.lower())
+        if validator and not validator(api_key):
+            return {'valid': False, 'message': f'Invalid {service} API key format'}
+        
+        return {'valid': True, 'message': 'API key format appears valid'}
+    
+    def log_api_usage(self, service: str, endpoint: str, user_email: str = None, 
+                     request_data: Dict = None, response_data: Dict = None,
+                     status_code: int = 200, processing_time: float = 0):
+        """Log API usage to database"""
+        target_user = user_email or self.current_user_email
+        
+        if target_user:
+            try:
+                supabase_client.log_api_request(
+                    target_user, service, endpoint, request_data, 
+                    response_data, status_code, processing_time
+                )
+            except Exception as e:
+                print(f"Error logging API usage: {e}")
+    
+    def get_user_usage_stats(self, user_email: str = None, days: int = 30) -> Dict:
+        """Get usage statistics for a user"""
+        target_user = user_email or self.current_user_email
+        
+        if target_user:
+            try:
+                return supabase_client.get_user_usage_stats(target_user, days)
+            except Exception as e:
+                print(f"Error getting usage stats: {e}")
+        
+        return {'total_requests': 0, 'service_breakdown': {}, 'status_breakdown': {}}
 
 # Global instance
-simple_api_manager = SimpleApiManager()
+api_manager = SimpleAPIManager()
