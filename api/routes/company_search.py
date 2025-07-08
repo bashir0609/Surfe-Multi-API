@@ -1,9 +1,6 @@
-import json
 import logging
-import asyncio
 from flask import request, jsonify
 from utils.simple_api_client import simple_surfe_client
-from config.simple_api_manager import simple_api_manager
 
 logger = logging.getLogger(__name__)
 
