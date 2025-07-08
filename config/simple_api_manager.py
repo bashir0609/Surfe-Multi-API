@@ -233,42 +233,41 @@ class SimpleAPIManager:
                 print(f"Error getting usage stats: {e}")
         
         return {'total_requests': 0, 'service_breakdown': {}, 'status_breakdown': {}}
-
-# Global instance
-# api_manager = SimpleAPIManager()
-
-# Add this to the END of your config/simple_api_manager.py file
-
-# Create instances for backwards compatibility
-simple_api_manager = SimpleAPIManager()
-api_manager = simple_api_manager
-
-# Add backwards compatibility methods
-class CompatibilityWrapper:
-    def __init__(self, manager):
-        self.manager = manager
-        
-    def get_selected_key(self):
-        """Backwards compatibility for get_selected_key()"""
+    
+    def get_stats(self) -> Dict:
+        """Get system statistics - backwards compatibility method"""
         try:
-            return self.manager.get_selected_api_key()
-        except:
-            # Fallback to first available key
-            if self.manager.fallback_keys:
-                return list(self.manager.fallback_keys.values())[0]
-            return None
+            user_keys_count = 0
+            if self.current_user_email:
+                user_keys = self.get_user_surfe_keys(self.current_user_email)
+                user_keys_count = len([k for k in user_keys if k.get('is_active')])
+            
+            return {
+                'total_keys': len(self.fallback_keys) + user_keys_count,
+                'environment_keys': len(self.fallback_keys),
+                'user_keys': user_keys_count,
+                'selected_key': self.current_user_email or 'system_managed',
+                'database_available': True
+            }
+        except Exception as e:
+            # Fallback stats if database fails
+            return {
+                'total_keys': len(self.fallback_keys),
+                'environment_keys': len(self.fallback_keys),
+                'user_keys': 0,
+                'selected_key': 'system_managed',
+                'database_available': False,
+                'error': str(e)
+            }
     
-    def get_stats(self):
-        """Backwards compatibility for get_stats()"""
-        return {
-            "total_keys": len(self.manager.fallback_keys),
-            "selected_key": "database_managed",
-            "fallback_keys_available": len(self.manager.fallback_keys)
-        }
-    
-    def __getattr__(self, name):
-        # Delegate other method calls to the wrapped manager
-        return getattr(self.manager, name)
+    def get_selected_key(self) -> Optional[str]:
+        """Get selected API key - backwards compatibility method"""
+        return self.get_selected_api_key()
 
-# Replace the simple_api_manager with wrapped version
-simple_api_manager = CompatibilityWrapper(simple_api_manager)
+# Global instances - maintaining backwards compatibility
+api_manager = SimpleAPIManager()
+simple_api_manager = api_manager  # Backwards compatibility for existing code
+
+# Also ensure the old method name exists
+if hasattr(simple_api_manager, 'get_selected_api_key'):
+    simple_api_manager.get_selected_key = simple_api_manager.get_selected_api_key
