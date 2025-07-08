@@ -8,7 +8,7 @@ import aiohttp
 import re
 from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
-from config.simple_api_manager import simple_api_manager
+from config.simple_api_manager import api_manager as simple_api_manager
 
 logger = logging.getLogger(__name__)
 
