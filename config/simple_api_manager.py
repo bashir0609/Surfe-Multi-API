@@ -235,4 +235,40 @@ class SimpleAPIManager:
         return {'total_requests': 0, 'service_breakdown': {}, 'status_breakdown': {}}
 
 # Global instance
-api_manager = SimpleAPIManager()
+# api_manager = SimpleAPIManager()
+
+# Add this to the END of your config/simple_api_manager.py file
+
+# Create instances for backwards compatibility
+simple_api_manager = SimpleAPIManager()
+api_manager = simple_api_manager
+
+# Add backwards compatibility methods
+class CompatibilityWrapper:
+    def __init__(self, manager):
+        self.manager = manager
+        
+    def get_selected_key(self):
+        """Backwards compatibility for get_selected_key()"""
+        try:
+            return self.manager.get_selected_api_key()
+        except:
+            # Fallback to first available key
+            if self.manager.fallback_keys:
+                return list(self.manager.fallback_keys.values())[0]
+            return None
+    
+    def get_stats(self):
+        """Backwards compatibility for get_stats()"""
+        return {
+            "total_keys": len(self.manager.fallback_keys),
+            "selected_key": "database_managed",
+            "fallback_keys_available": len(self.manager.fallback_keys)
+        }
+    
+    def __getattr__(self, name):
+        # Delegate other method calls to the wrapped manager
+        return getattr(self.manager, name)
+
+# Replace the simple_api_manager with wrapped version
+simple_api_manager = CompatibilityWrapper(simple_api_manager)
