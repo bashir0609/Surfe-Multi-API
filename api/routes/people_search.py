@@ -1,28 +1,26 @@
 import json
 import logging
-import asyncio
 from flask import request, jsonify
 from utils.simple_api_client import simple_surfe_client
-from config.simple_api_manager import simple_api_manager # given by perplexity for pagination
 from core.dependencies import validate_request_data
 
 logger = logging.getLogger(__name__)
-    
+
 def search_people_v1():
     """
-    Search for people using v1 format, converted to v2 with rotation
+    Search for people using v1 format, which is converted to v2 format
+    before being sent to the Surfe API.
     """
     try:
-        # Get JSON data from request
         request_data = request.get_json()
         if not request_data:
             return jsonify({"error": "No JSON data provided"}), 400
 
         # Convert v1 format to v2 format
-        v2_data = convert_v1_to_v2_dict(request_data)
-        logger.info(f"🔄 Converting v1 to v2: {request_data} -> {v2_data}")
+        v2_data = _convert_v1_to_v2_dict(request_data)
+        logger.info(f"🔄 Converting v1 request to v2: {v2_data}")
 
-        # Make request using synchronous wrapper
+        # Make request using the synchronous client
         result = simple_surfe_client.make_request(
             method="POST",
             endpoint="/v2/people/search",
@@ -36,11 +34,11 @@ def search_people_v1():
         return jsonify({"success": True, "data": result})
 
     except Exception as e:
-        logger.error(f"❌ Error in v1 people search: {str(e)}")
-        return jsonify({"error": f"Error in v1 endpoint: {str(e)}"}), 500
+        logger.error(f"❌ Error in v1 people search endpoint: {str(e)}")
+        return jsonify({"error": "An internal server error occurred."}), 500
 
-def convert_v1_to_v2_dict(v1_data: dict) -> dict:
-    """Convert v1 request format to v2 format"""
+def _convert_v1_to_v2_dict(v1_data: dict) -> dict:
+    """Helper function to convert v1 request format to v2 format."""
     v2_data = {
         "companies": {},
         "people": {},
@@ -48,10 +46,9 @@ def convert_v1_to_v2_dict(v1_data: dict) -> dict:
         "peoplePerCompany": v1_data.get("people_per_company", 1),
         "pageToken": ""
     }
-
     filters = v1_data.get("filters", {})
 
-    # Map v1 filters to v2 structure
+    # Map v1 filters to the nested v2 structure
     if "industries" in filters:
         v2_data["companies"]["industries"] = filters["industries"]
     if "seniorities" in filters:
@@ -73,75 +70,71 @@ def convert_v1_to_v2_dict(v1_data: dict) -> dict:
 
 def search_people_v2():
     """
-    Search for people using Surfe API v2 structure with rotation system and paginated fetching.
+    Search for people using Surfe API v2, with server-side pagination
+    to fetch all results up to the specified limit.
     """
     try:
         request_data = request.get_json()
         if not request_data:
             return jsonify({"error": "No JSON data provided"}), 400
 
-        logger.info(f"🔍 People Search v2 Request: {request_data}")
-
         if not validate_request_data(request_data):
-            return jsonify({
-                "error": "At least one company or people filter must be provided"
-            }), 400
+            return jsonify({"error": "Invalid request: at least one company or people filter must be provided."}), 400
 
-        all_people = fetch_all_people_paginated(request_data)
+        logger.info(f"🔍 Starting paginated people search for request: {request_data}")
 
-        logger.info(f"✅ People Search v2 Success: Found {len(all_people)} people")
+        all_people = _fetch_all_people_paginated(request_data)
+
+        logger.info(f"✅ People Search v2 Success: Found {len(all_people)} people.")
         return jsonify({"success": True, "data": {"people": all_people}})
 
     except Exception as e:
         logger.error(f"❌ Unexpected error in people search v2: {str(e)}")
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+        return jsonify({"error": "An unexpected server error occurred."}), 500
 
-def fetch_all_people_paginated(payload):
+def _fetch_all_people_paginated(payload: dict) -> list:
+    """
+    Handles paginated fetching from the Surfe API to collect all people
+    up to the desired limit.
+    """
     all_people = []
     page_token = ""
-    
-    # Get the desired limit from payload (default to 10 if not specified)
+    page_count = 0
+    max_pages = 25  # Safety break to prevent accidental infinite loops
+
     desired_limit = payload.get("limit", 10)
-    
     # Make a shallow copy of payload to avoid mutating the original dict
     payload_copy = dict(payload)
-    
-    while True:
+
+    while page_count < max_pages:
         payload_copy["pageToken"] = page_token
-        
-        # Calculate how many more results we need
         remaining_needed = desired_limit - len(all_people)
-        
-        # If we already have enough results, break
+
         if remaining_needed <= 0:
-            break
-            
-        # Use existing client wrapper
+            break # We have enough results
+
         result = simple_surfe_client.make_request(
             method="POST",
             endpoint="/v2/people/search",
             json_data=payload_copy
         )
-        
+
         if "error" in result:
-            logger.error(f"❌ Surfe API Error: {result.get('error')}")
-            break
-            
+            logger.error(f"❌ Surfe API Error during pagination: {result.get('error')}")
+            break # Stop on API error
+
         people = result.get("people", [])
-        
         if not people:
-            break  # Stop if no people returned
-            
-        # Add people but don't exceed the desired limit
+            break # Stop if no more people are returned
+
+        # Add only the people needed to reach the desired limit
         people_to_add = people[:remaining_needed]
         all_people.extend(people_to_add)
-        
-        # If we've reached our desired limit, stop
-        if len(all_people) >= desired_limit:
-            break
-        
+
         page_token = result.get("nextPageToken")
         if not page_token:
-            break  # Stop if no more pages
-            
+            break # Stop if the API indicates there are no more pages
+
+        page_count += 1
+
     return all_people
