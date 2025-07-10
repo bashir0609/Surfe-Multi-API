@@ -27,6 +27,7 @@
         loadApiKeysStatus();
         loadKeyStats();
         loadSystemSettings();
+        loadSelectedKeyFromStorage(); // Add this line
         
         console.log('✅ Settings module v2 initialized');
     }
@@ -123,11 +124,14 @@
     
     async function handleSelectKey(keyName) {
         try {
-            const response = await SurfeApp.api.post('/api/select-key', {
+            const response = await SurfeApp.api.post('/api/settings/select', {
                 key_name: keyName
             });
             
             if (response.success) {
+                // Store in localStorage for persistence
+                localStorage.setItem('surfe_selected_key', keyName);
+                
                 SurfeApp.ui.showToast(`Selected API key: ${keyName}`, 'success');
                 loadApiKeysStatus();
                 loadKeyStats();
@@ -137,6 +141,13 @@
         } catch (error) {
             console.error('Error selecting API key:', error);
             SurfeApp.ui.showToast('Error selecting API key', 'error');
+        }
+    }
+    function loadSelectedKeyFromStorage() {
+        const savedKey = localStorage.getItem('surfe_selected_key');
+        if (savedKey) {
+            // Auto-select the saved key
+            handleSelectKey(savedKey);
         }
     }
     

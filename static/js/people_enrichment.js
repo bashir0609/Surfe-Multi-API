@@ -414,9 +414,15 @@
         SurfeApp.ui.showLoading(resultsContainer, 'Processing CSV and enriching data...');
 
         try {
+            // Get selected key from localStorage
+            const selectedKey = localStorage.getItem('surfe_selected_key');
+            
             const response = await fetch(config.endpoints.enrichBulk, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'X-Selected-Key': selectedKey || '', // Add this header
+                },
+                body: formData // Note: Don't set Content-Type for FormData
             });
 
             const result = await response.json();
@@ -438,21 +444,34 @@
         }
     }
 
-    // Updated by Gemini
     async function performEnrichment(data, method) {
         const resultsContainer = document.getElementById('enrichment-results');
         SurfeApp.ui.showLoading(resultsContainer, 'Submitting enrichment request...');
 
         try {
+            // Get selected key from localStorage
+            const selectedKey = localStorage.getItem('surfe_selected_key');
+            
+            console.log('🔑 People enrichment using selected key:', selectedKey || 'default');
+            
             // This now correctly expects an async response
-            const response = await SurfeApp.api.request('POST', config.endpoints.enrich, data);
+            const response = await fetch(config.endpoints.enrich, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Selected-Key': selectedKey || '', // Add this header
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
 
             // The key is likely 'enrichmentID' based on the company enrichment flow
-            if (response.success && response.data && response.data.enrichmentID) {
+            if (result.success && result.data && result.data.enrichmentID) {
                 SurfeApp.ui.showToast('Enrichment job started successfully!', 'info');
-                pollForResults(response.data.enrichmentID, method);
+                pollForResults(result.data.enrichmentID, method);
             } else {
-                throw new Error(response.error || 'Failed to start enrichment job.');
+                throw new Error(result.error || 'Failed to start enrichment job.');
             }
         } catch (error) {
             console.error('Enrichment error:', error);

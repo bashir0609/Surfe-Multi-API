@@ -8,7 +8,7 @@ import aiohttp
 import re
 from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
-from config.simple_api_manager import api_manager as simple_api_manager
+from config.simple_api_manager import simple_api_manager
 
 logger = logging.getLogger(__name__)
 
@@ -81,69 +81,127 @@ class SimpleSurfeClient:
     def __init__(self):
         self.base_url = "https://api.surfe.com"
         self.timeout = 30
-    
+
+    # In utils/simple_api_client.py
+
     async def make_request_async(
         self,
         method: str,
         endpoint: str,
         json_data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
-        timeout: int = 30
+        timeout: int = 30,
+        selected_key: Optional[str] = None
     ) -> Dict[str, Any]:
         """Make async request to Surfe API with selected key"""
-        
-        # Get the selected API key
-        api_key = simple_api_manager.get_selected_key()
+
+        # Get API key
+        if selected_key:
+            api_key = simple_api_manager.get_key_by_name(selected_key)
+            if not api_key:
+                logger.warning(f"Selected key '{selected_key}' not found, using manager default")
+                api_key = simple_api_manager.get_selected_key()
+        else:
+            api_key = simple_api_manager.get_selected_key()
+
         if not api_key:
-            raise Exception("No API key selected or available")
-        
+            raise ValueError("No API key selected or available")
+
+        # Prepare request
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "User-Agent": "SurfeMultiAPI/1.0"
         }
-        
+
+        method = method.upper()
         logger.info(f"Making {method} request to {endpoint}")
         
+        # Debug logging for request data
+        if json_data:
+            logger.debug(f"Request JSON data: {json_data}")
+        if params:
+            logger.debug(f"Request params: {params}")
+
+        # Build request arguments conditionally
+        request_kwargs = {
+            'method': method,
+            'url': url,
+            'headers': headers,
+            'timeout': aiohttp.ClientTimeout(total=timeout)
+        }
+        
+        # Add params if provided
+        if params:
+            request_kwargs['params'] = params
+            
+        # Only add JSON body for methods that typically have request bodies
+        if method in ('POST', 'PUT', 'PATCH') and json_data is not None:
+            request_kwargs['json'] = json_data
+
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
-                async with session.request(
-                    method=method.upper(),
-                    url=url,
-                    json=json_data,
-                    params=params,
-                    headers=headers
-                ) as response:
-                    
+            async with aiohttp.ClientSession() as session:
+                async with session.request(**request_kwargs) as response:
                     response_text = await response.text()
-                    
+
+                    # Handle successful responses
                     if response.status in [200, 201, 202]:
                         try:
                             result = await response.json()
-                            logger.info(f"Successful request to {endpoint}")
+                            logger.info(f"Successful {method} request to {endpoint}")
                             return result
-                        except Exception as json_error:
-                            logger.error(f"JSON parsing error: {json_error}")
+                        except (aiohttp.ContentTypeError, ValueError) as json_error:
+                            logger.error(f"JSON parsing error for {endpoint}: {json_error}")
                             return {"error": "Invalid JSON response", "raw_response": response_text}
+                    
+                    # Handle specific error cases
+                    elif response.status == 400:
+                        logger.error(f"Bad request for {endpoint}: {response_text}")
+                        try:
+                            error_data = await response.json()
+                            raise ValueError(f"Bad request: {error_data.get('message', response_text)}")
+                        except:
+                            raise ValueError(f"Bad request: {response_text}")
                     
                     elif response.status == 401:
                         logger.error(f"Authentication failed for {endpoint}")
-                        raise Exception("Invalid API key or authentication failed")
+                        raise ValueError("Invalid API key or authentication failed")
                     
                     elif response.status == 429:
                         logger.error(f"Rate limit exceeded for {endpoint}")
                         raise Exception("Rate limit exceeded")
                     
+                    elif response.status == 404:
+                        logger.error(f"Endpoint not found: {endpoint}")
+                        raise ValueError(f"Endpoint not found: {endpoint}")
+                    
+                    elif response.status >= 500:
+                        logger.error(f"Server error {response.status} for {endpoint}: {response_text}")
+                        # Try to extract nested error information
+                        try:
+                            error_data = await response.json()
+                            if 'message' in error_data:
+                                raise Exception(f"Server error {response.status}: {error_data['message']}")
+                            else:
+                                raise Exception(f"Server error {response.status}: {response_text}")
+                        except:
+                            raise Exception(f"Server error {response.status}: {response_text}")
+                    
                     else:
                         logger.error(f"HTTP {response.status} error for {endpoint}: {response_text}")
                         raise Exception(f"HTTP {response.status}: {response_text}")
-                        
+
         except asyncio.TimeoutError:
             logger.error(f"Request timeout for {endpoint}")
-            raise Exception("Request timeout")
+            raise TimeoutError(f"Request timeout for {endpoint}")
+        
+        except aiohttp.ClientError as e:
+            logger.error(f"Client error for {endpoint}: {str(e)}")
+            raise Exception(f"Client error: {str(e)}")
+        
         except Exception as e:
-            logger.error(f"Request failed for {endpoint}: {str(e)}")
+            logger.error(f"Unexpected error for {endpoint}: {str(e)}")
             raise
     
     def make_request(
@@ -152,14 +210,15 @@ class SimpleSurfeClient:
         endpoint: str,
         json_data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
-        timeout: int = 30
+        timeout: int = 30,
+        selected_key: Optional[str] = None  # Add this parameter
     ) -> Dict[str, Any]:
         """Synchronous wrapper for async request"""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             return loop.run_until_complete(
-                self.make_request_async(method, endpoint, json_data, params, timeout)
+                self.make_request_async(method, endpoint, json_data, params, timeout, selected_key)
             )
         finally:
             loop.close()

@@ -330,13 +330,18 @@
         SurfeApp.utils.updateButtonState(document.querySelector('#company-search-form button[type="submit"]'), true, 'Searching...', 'Search Companies');
         
         const formData = this.collectFormData();
-        
+
+        // Add selected key from localStorage
+        const selectedKey = localStorage.getItem('surfe_selected_key');
+
         console.log('🔍 Performing company search with data:', formData);
-        
+        console.log('🔑 Using selected key:', selectedKey || 'default');
+
         fetch('/api/v2/companies/search', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-Selected-Key': selectedKey || '', // Add this header
             },
             body: JSON.stringify(formData)
         })

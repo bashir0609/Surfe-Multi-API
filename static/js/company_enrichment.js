@@ -545,18 +545,29 @@
         SurfeApp.ui.showLoading(resultsContainer, 'Enriching company data...');
 
         try {
+            // Get selected key from localStorage
+            const selectedKey = localStorage.getItem('surfe_selected_key');
+            
+            console.log('🔑 Company enrichment using selected key:', selectedKey || 'default');
+            
+            // Use SurfeApp.api.request instead of fetch
             const response = await SurfeApp.api.request(
                 'POST',
                 config.endpoints.enrich,
-                data
+                data, { 
+                    headers: {
+                        'Content-Type': 'application/json', // Add this line
+                        'X-Selected-Key': selectedKey || ''
+                    }
+                }
             );
 
-            if (response.success && response.data && response.data.enrichmentID) {
+            // Handle response
+            if (response.success && response.data?.enrichmentID) {
                 SurfeApp.ui.showToast('Enrichment job started successfully!', 'info');
-                // Call the new polling function with the ID from the response
-                pollForResults(response.data.enrichmentID, method); 
+                pollForResults(response.data.enrichmentID, method);
             } else {
-                throw new Error(response.error || 'Failed to start enrichment job.');
+                throw new Error(response.error || 'Failed to start enrichment job');
             }
         } catch (error) {
             console.error('Enrichment error:', error);
@@ -601,7 +612,11 @@
                 const response = await SurfeApp.api.request(
                     'POST',
                     config.endpoints.enrich,
-                    batchData
+                    batchData, {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
                 );
 
                 console.log(`Batch ${i + 1} response:`, response);
@@ -1040,7 +1055,11 @@
             const response = await SurfeApp.api.request(
                 'POST',
                 config.endpoints.enrich,
-                testData
+                testData, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
             );
             
             console.log('Test enrichment response:', response);

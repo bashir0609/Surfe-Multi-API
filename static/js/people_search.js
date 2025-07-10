@@ -335,16 +335,24 @@
         SurfeApp.utils.updateButtonState(document.querySelector('#people-search-form button[type="submit"]'), true, 'Searching...', 'Search People');
         
         const formData = this.collectFormData();
-        
+
+        // Add selected key from localStorage
+        const selectedKey = localStorage.getItem('surfe_selected_key');
+        if (selectedKey) {
+            formData._selectedKey = selectedKey;
+        }
+
         console.log('🔍 Performing people search with data:', formData);
-        
+
         fetch('/api/v2/people/search', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-Selected-Key': selectedKey || '', // Add this header
             },
             body: JSON.stringify(formData)
         })
+        
         .then(response => response.json())
         .then(data => {
             this.handleSearchResponse(data);
@@ -359,6 +367,7 @@
             SurfeApp.utils.updateButtonState(document.querySelector('#people-search-form button[type="submit"]'), false, 'Searching...', 'Search People');
         });
     };
+    
     
     PeopleSearchV2.collectFormData = function() {
         const formData = new FormData(this.searchForm);

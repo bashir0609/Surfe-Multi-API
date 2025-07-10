@@ -1,8 +1,26 @@
+import json
 import logging
+import asyncio
 from flask import request, jsonify
 from utils.simple_api_client import simple_surfe_client
+from config.simple_api_manager import simple_api_manager
 
 logger = logging.getLogger(__name__)
+
+def get_selected_key_from_request():
+    """Get selected key from request headers or body"""
+    # Try header first
+    selected_key = request.headers.get('X-Selected-Key')
+    if selected_key:
+        return selected_key.strip()
+    
+    # Try from JSON body
+    request_data = request.get_json() or {}
+    selected_key = request_data.get('_selectedKey')
+    if selected_key:
+        return selected_key.strip()
+    
+    return None
 
 def search_companies():
     """
@@ -23,8 +41,11 @@ def search_companies():
 
         logger.info(f"🔍 Company Search Request: {request_data}")
 
+        # Get selected key from request
+        selected_key = get_selected_key_from_request()
+
         # Call the paginated fetch function only if filters are present
-        all_companies = fetch_all_companies_paginated(request_data)
+        all_companies = fetch_all_companies_paginated(request_data, selected_key)
 
         logger.info(f"✅ Company Search Success: Found {len(all_companies)} companies")
         return jsonify({"success": True, "data": {"companies": all_companies}})
@@ -33,7 +54,7 @@ def search_companies():
         logger.error(f"❌ Unexpected error in company search: {str(e)}")
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
-def fetch_all_companies_paginated(payload):
+def fetch_all_companies_paginated(payload, selected_key=None):
     """
     Fetches companies from the Surfe API with proper pagination,
     respecting the requested limit and initial page token.
@@ -69,7 +90,8 @@ def fetch_all_companies_paginated(payload):
         result = simple_surfe_client.make_request(
             method="POST",
             endpoint="/v2/companies/search",
-            json_data=payload_copy
+            json_data=payload_copy,
+            selected_key=selected_key  # Add this parameter
         )
         
         # If the API returns an error, log it and stop fetching.
