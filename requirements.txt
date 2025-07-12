@@ -11,3 +11,5 @@ pandas
 python-jose[cryptography]==3.3.0
 authlib==1.2.1
 supabase==2.0.0
+flask-mail==0.9.1
+httpx

@@ -140,33 +140,73 @@
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-file-upload me-2"></i>
-                    CSV File Upload
+                    CSV File Upload with Column Selection
                 </h5>
             </div>
             <div class="card-body">
+                <!-- CSV Requirements -->
+                <div class="alert alert-primary mb-4">
+                    <h6><i class="fas fa-info-circle me-2"></i>CSV Requirements & Format</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Required Column:</strong>
+                            <ul class="mb-2 small mt-1">
+                                <li><code>domain</code> or <code>website</code> - Company domain</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Optional Columns:</strong>
+                            <ul class="mb-2 small mt-1">
+                                <li><code>id</code> or <code>external_id</code> - For tracking</li>
+                                <li><code>name</code> - Company name (informational)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <strong>Limits:</strong> Max 500 companies per batch, files up to 5MB
+                </div>
+
                 <form id="csv-upload-form" enctype="multipart/form-data">
                     <div class="mb-3">
-                        <label for="csv-file" class="form-label">Choose CSV File</label>
+                        <label for="csv-file" class="form-label">
+                            <span class="badge bg-primary me-2">Step 1</span>
+                            Choose CSV File
+                        </label>
                         <input type="file" id="csv-file" name="file" class="form-control" accept=".csv">
                         <div class="form-text">
-                            CSV should contain columns: name, domain, website, industry, location, employee_count
+                            File will be automatically analyzed for domain columns
                         </div>
-                        </div>
-                        <!-- Domain column selector, hidden by default -->
-                        <select id="domain-column-select" style="display:none; margin-top:10px;">
+                    </div>
+                    
+                    <!-- Step 2: Domain Column Selector (Hidden by default, shown after file upload) -->
+                    <div class="mb-3" id="domain-selection-section" style="display:none;">
+                        <label for="domain-column-select" class="form-label">
+                            <span class="badge bg-success me-2">Step 2</span>
+                            Select Domain Column
+                        </label>
+                        <select id="domain-column-select" class="form-select">
                             <option value="">Select domain column</option>
                         </select>
-                        <span id="unique-domain-count" style="display:none; margin-left:10px; font-weight:bold; color:#007bff;"></span>                    <div class="mb-3">
-                        <div class="alert alert-info">
-                            <strong>CSV Format Example:</strong>
-                            <code>name,domain,website,industry,location,employee_count</code><br>
-                            <code>Acme Corp,acme.com,https://acme.com,Technology,San Francisco,100</code>
+                        <div class="form-text">
+                            <span id="unique-domain-count"></span>
                         </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="alert alert-success">
+                            <strong>CSV Format Example:</strong><br>
+                            <code class="d-block mt-2">domain,name,external_id</code>
+                            <code class="d-block">acme.com,Acme Corporation,company_1</code>
+                            <code class="d-block">google.com,Google Inc,company_2</code>
+                            <code class="d-block">microsoft.com,Microsoft Corp,company_3</code>
                         </div>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-upload me-2"></i>
-                            Upload and Enrich
-                        </button>
+                    </div>
+                    
+                    <!-- Step 1/3: Single Dynamic Button -->
+                    <button type="submit" id="csv-action-btn" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>
+                        <span class="badge bg-light text-dark me-2">Step 1</span>
+                        Upload and Analyze CSV
+                    </button>
                 </form>
             </div>
         </div>
@@ -182,22 +222,22 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form id="bulk-enrichment-form">
-                    <!-- API v2 Compliance Notice -->
-                    <div class="alert alert-info mb-4">
-                        <div class="d-flex align-items-start">
-                            <i class="fas fa-info-circle me-3 mt-1"></i>
-                            <div>
-                                <strong>Surfe API v2 Requirements:</strong>
-                                <ul class="mb-0 mt-2">
-                                    <li><strong>Domain Required:</strong> Each company must have a valid domain (e.g. acme.com)</li>
-                                    <li><strong>External ID Optional:</strong> You can provide an external ID for tracking (optional)</li>
-                                    <li><strong>Line Matching:</strong> External IDs correspond to domains by line number</li>
-                                </ul>
-                            </div>
+                <!-- API v2 Compliance Notice -->
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle me-3 mt-1"></i>
+                        <div>
+                            <strong>Surfe API v2 Requirements:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Domain Required:</strong> Each company must have a valid domain (e.g. acme.com)</li>
+                                <li><strong>External ID Optional:</strong> You can provide an external ID for tracking (optional)</li>
+                                <li><strong>Line Matching:</strong> External IDs correspond to domains by line number</li>
+                            </ul>
                         </div>
                     </div>
+                </div>
 
+                <form id="bulk-enrichment-form">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">

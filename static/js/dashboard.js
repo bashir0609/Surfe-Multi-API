@@ -135,7 +135,6 @@
      * =====================================================================
      */
     Dashboard.updateStatsDisplay = function(stats) {
-        // Handle case when no keys are configured
         if (stats.message && stats.active_keys === 0 && stats.total_keys === 0) {
             // Show "no keys" state
             this.updateStatCard('total-keys', 0);
@@ -182,13 +181,24 @@
     };
     
     Dashboard.updateStatCard = function(cardId, value) {
+        
         const element = document.getElementById(cardId);
-        if (element) {
-            const valueElement = element.querySelector('.stat-value');
-            if (valueElement) {
-                // Animate value change
-                this.animateValue(valueElement, valueElement.textContent, value);
-            }
+        if (!element) {
+            console.error(`❌ Card element ${cardId} not found`);
+            return;
+        }
+        
+        // Try different selectors for the value element
+        let valueElement = element.querySelector('.stat-value');
+        if (!valueElement) {
+            valueElement = element; // Fallback to the element itself
+        }
+        
+        if (valueElement) {
+            valueElement.textContent = value;
+            console.log(`✅ Updated ${cardId} to: ${value}`);
+        } else {
+            console.error(`❌ Value element not found in ${cardId}`);
         }
     };
     

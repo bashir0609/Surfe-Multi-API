@@ -2,6 +2,15 @@
 
 {% block title %}People Enrichment - Surfe API Project{% endblock %}
 
+{% block styles %}
+<!-- Bootstrap CSS (if not in base.html) -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Font Awesome (if not in base.html) -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<!-- Custom People Enrichment CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/people_enrichment.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <!-- Page Header -->
@@ -21,6 +30,57 @@
                     <i class="fas fa-sync-alt me-1"></i>
                     Simple Key Selection
                 </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Valid Combinations Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                Valid Enrichment Combinations
+                <button id="toggle-combinations" class="btn btn-sm btn-outline-primary ms-2">
+                    <i class="fas fa-eye me-1"></i>Show Details
+                </button>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-primary">
+                <i class="fas fa-lightbulb me-2"></i>
+                <strong>Choose the best combination:</strong> Higher accuracy combinations provide better enrichment results. Use the most complete data available.
+            </div>
+            
+            <div id="combinations-container" style="display: none;">
+                <!-- Combinations will be loaded here -->
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading combinations...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Options Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-check-square me-2"></i>
+                Data to Include in Enrichment Results
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info mb-3">
+                <small><i class="fas fa-info-circle me-1"></i><strong>Required:</strong> At least one field must be selected</small>
+            </div>
+            <div id="include-options-container">
+                <!-- Include options will be loaded here -->
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading options...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -73,17 +133,6 @@
     <!-- Manual Entry Form -->
     <div id="manual-input" class="input-section active">
         <form id="people-enrichment-form">
-            <!-- Requirements Information -->
-            <div class="alert alert-primary mb-4">
-                <h6><i class="fas fa-info-circle me-2"></i>Enrichment Requirements</h6>
-                <ul class="mb-0 small">
-                    <li><strong>Person Identification:</strong> Provide at least First/Last Name OR LinkedIn URL</li>
-                    <li><strong>Field Limits:</strong> Company Domain, Company Name, LinkedIn URL (max 2000 characters each)</li>
-                    <li><strong>Bulk Limits:</strong> 1-10,000 people per request</li>
-                    <li><strong>Include Fields:</strong> At least one data field must be selected below</li>
-                </ul>
-            </div>
-            
             <div class="row">
                 <div class="col-lg-6">
                     <h5 class="mb-3">
@@ -94,25 +143,29 @@
                     <div class="filter-group">
                         <label for="first-name" class="filter-label">First Name</label>
                         <input type="text" id="first-name" name="first-name" class="form-control" 
-                               placeholder="John">
+                               placeholder="David" maxlength="100">
+                        <div class="form-text">Required for name-based combinations</div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="last-name" class="filter-label">Last Name</label>
                         <input type="text" id="last-name" name="last-name" class="form-control" 
-                               placeholder="Smith">
+                               placeholder="Chevalier" maxlength="100">
+                        <div class="form-text">Required for name-based combinations</div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="email" class="filter-label">Email Address</label>
                         <input type="email" id="email" name="email" class="form-control" 
-                               placeholder="john.smith@company.com">
+                               placeholder="david@surfe.com" maxlength="320">
+                        <div class="form-text">High accuracy - can be used alone</div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="linkedin-url" class="filter-label">LinkedIn URL</label>
                         <input type="url" id="linkedin-url" name="linkedin-url" class="form-control" 
-                               placeholder="https://linkedin.com/in/johnsmith">
+                               placeholder="https://www.linkedin.com/in/david-maurice-chevalier" maxlength="2000">
+                        <div class="form-text">Best accuracy - can be used alone</div>
                     </div>
                 </div>
 
@@ -125,87 +178,40 @@
                     <div class="filter-group">
                         <label for="company-name" class="filter-label">Company Name</label>
                         <input type="text" id="company-name" name="company-name" class="form-control" 
-                               placeholder="Acme Corporation">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="job-title" class="filter-label">Job Title</label>
-                        <input type="text" id="job-title" name="job-title" class="form-control" 
-                               placeholder="Software Engineer">
+                               placeholder="Surfe" maxlength="2000">
+                        <div class="form-text">Improves accuracy when combined with name</div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="company-domain" class="filter-label">Company Domain</label>
                         <input type="text" id="company-domain" name="company-domain" class="form-control" 
-                               placeholder="acme.com">
+                               placeholder="surfe.com" maxlength="2000">
+                        <div class="form-text">Without www or https://</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Include Options -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-check-square me-2"></i>
-                                Data to Include in Response
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info mb-3">
-                                <small><i class="fas fa-info-circle me-1"></i><strong>Required:</strong> At least one field must be selected</small>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="include-email" name="include-email" checked>
-                                        <label class="form-check-label" for="include-email">
-                                            <i class="fas fa-envelope me-1"></i>Email Address
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="include-linkedin" name="include-linkedin">
-                                        <label class="form-check-label" for="include-linkedin">
-                                            <i class="fab fa-linkedin me-1"></i>LinkedIn URL
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="include-mobile" name="include-mobile" checked>
-                                        <label class="form-check-label" for="include-mobile">
-                                            <i class="fas fa-mobile-alt me-1"></i>Mobile Number
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- External ID and Webhook URL -->
-            <div class="row mt-3">
-                <div class="col-md-6">
+                    
                     <div class="filter-group">
                         <label for="external-id" class="filter-label">External ID (Optional)</label>
                         <input type="text" id="external-id" name="external-id" class="form-control" 
-                               placeholder="your-unique-identifier">
-                        <small class="form-text text-muted">Your own identifier for tracking this enrichment</small>
+                               placeholder="external-id-123" maxlength="200">
+                        <div class="form-text">Your unique identifier for tracking</div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Webhook Options -->
+            <div class="row mt-3">
                 <div class="col-md-6">
                     <div class="filter-group">
                         <label for="webhook-url" class="filter-label">Webhook URL (Optional)</label>
                         <input type="url" id="webhook-url" name="webhook-url" class="form-control" 
                                placeholder="https://your-domain.com/webhook">
-                        <small class="form-text text-muted">URL for completion notifications (HTTPS/HTTP)</small>
+                        <div class="form-text">URL for completion notifications (HTTPS/HTTP supported)</div>
                     </div>
                 </div>
             </div>
+
+            <!-- Validation Result Display -->
+            <div id="validation-result" class="mt-3" style="display: none;"></div>
 
             <div class="row mt-4">
                 <div class="col-md-6 offset-md-3">
@@ -213,6 +219,10 @@
                         <button type="submit" class="btn btn-success enrichment-button">
                             <i class="fas fa-magic me-2"></i>
                             Enrich Person Data
+                        </button>
+                        <button type="button" id="validate-combination" class="btn btn-outline-info">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Validate Combination
                         </button>
                         <button type="button" id="reset-form" class="btn btn-outline-secondary">
                             <i class="fas fa-undo me-2"></i>
@@ -230,40 +240,103 @@
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-file-upload me-2"></i>
-                    CSV File Upload
+                    CSV File Upload for Enrichment
                 </h5>
             </div>
             <div class="card-body">
-                <!-- Requirements Information -->
                 <div class="alert alert-primary mb-4">
-                    <h6><i class="fas fa-info-circle me-2"></i>CSV Requirements</h6>
-                    <ul class="mb-0 small">
-                        <li><strong>Required:</strong> Each person needs first_name/last_name OR linkedin_url</li>
-                        <li><strong>Field Limits:</strong> Max 2000 characters for company_domain, company_name, linkedin_url</li>
-                        <li><strong>File Limit:</strong> Maximum 10,000 people per CSV file</li>
-                    </ul>
+                    <h6><i class="fas fa-info-circle me-2"></i>CSV Format Requirements</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>High Success Columns:</strong>
+                            <ul class="mb-2 small mt-1">
+                                <li><code>linkedin_url</code> - Best results (95% success)</li>
+                                <li><code>email</code> - High accuracy (85% success)</li>
+                            </ul>
+                            <strong>Good Success Columns:</strong>
+                            <ul class="mb-2 small mt-1">
+                                <li><code>first_name + last_name + company_name</code> (80%)</li>
+                                <li><code>first_name + last_name + company_domain</code> (75%)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Optional Columns:</strong>
+                            <ul class="mb-2 small mt-1">
+                                <li><code>external_id</code> - For tracking</li>
+                                <li><code>company_domain</code> - Improves accuracy</li>
+                                <li><code>company_name</code> - Improves accuracy</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <strong>Limits:</strong> Max 10,000 people per file, field limits apply
                 </div>
                 
                 <form id="csv-upload-form" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="csv-file" class="form-label">Choose CSV File</label>
                         <input type="file" id="csv-file" name="file" class="form-control" accept=".csv">
-                        <div class="form-text">
-                            CSV should contain columns: first_name, last_name, email, linkedin_url, company, title
+                        <div class="form-text">File will be validated against enrichment combinations</div>
+                    </div>
+
+                    <!-- Include Options for CSV -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-check-square me-2"></i>
+                                CSV Enrichment Data Options
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="csv-include-email" name="csv-include-email" checked>
+                                        <label class="form-check-label" for="csv-include-email">
+                                            <i class="fas fa-envelope me-1"></i>Email Address
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="csv-include-mobile" name="csv-include-mobile" checked>
+                                        <label class="form-check-label" for="csv-include-mobile">
+                                            <i class="fas fa-mobile-alt me-1"></i>Phone Number
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="csv-include-linkedin" name="csv-include-linkedin">
+                                        <label class="form-check-label" for="csv-include-linkedin">
+                                            <i class="fab fa-linkedin me-1"></i>LinkedIn URL
+                                            <span class="badge bg-warning ms-1">Setup Required</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="csv-include-job-history" name="csv-include-job-history">
+                                        <label class="form-check-label" for="csv-include-job-history">
+                                            <i class="fas fa-briefcase me-1"></i>Job History
+                                            <span class="badge bg-warning ms-1">Setup Required</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <div class="alert alert-info">
-                            <strong>CSV Format Example:</strong>
-                            <code>first_name,last_name,email,linkedin_url,company,title</code><br>
-                            <code>John,Smith,john@company.com,https://linkedin.com/in/john,Acme Corp,Engineer</code>
+                        <div class="alert alert-success">
+                            <strong>Example CSV Format:</strong><br>
+                            <code class="d-block mt-2">first_name,last_name,email,linkedin_url,company_name,company_domain,external_id</code>
+                            <code class="d-block">David,Chevalier,david@surfe.com,https://linkedin.com/in/david-maurice-chevalier,Surfe,surfe.com,ext-123</code>
                         </div>
                     </div>
                     
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-upload me-2"></i>
-                        Upload and Enrich
+                        Upload and Enrich CSV
                     </button>
                 </form>
             </div>
@@ -276,46 +349,144 @@
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-list me-2"></i>
-                    Bulk Input
+                    Bulk Input for Enrichment
                 </h5>
             </div>
             <div class="card-body">
-                <!-- Requirements Information -->
                 <div class="alert alert-primary mb-4">
-                    <h6><i class="fas fa-info-circle me-2"></i>Bulk Input Requirements</h6>
-                    <ul class="mb-0 small">
-                        <li><strong>Required:</strong> Provide at least one type of data (emails, LinkedIn URLs, or names)</li>
-                        <li><strong>Input Limit:</strong> Maximum 10,000 entries per request</li>
-                        <li><strong>Format:</strong> One entry per line in each field</li>
-                    </ul>
+                    <h6><i class="fas fa-info-circle me-2"></i>Bulk Enrichment Guidelines</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Best Results:</strong>
+                            <ul class="mb-0 small mt-1">
+                                <li>LinkedIn URLs (95%)</li>
+                                <li>Email addresses (85%)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Good Results:</strong>
+                            <ul class="mb-0 small mt-1">
+                                <li>Names + Companies (80%)</li>
+                                <li>Names + Domains (75%)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Matching:</strong>
+                            <ul class="mb-0 small mt-1">
+                                <li>Line-by-line pairing</li>
+                                <li>Smart data enhancement</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Limits:</strong>
+                            <ul class="mb-0 small mt-1">
+                                <li>Max 10,000 entries</li>
+                                <li>One entry per line</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
                 
                 <form id="bulk-enrichment-form">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="bulk-emails" class="form-label">Email Addresses</label>
+                                <label for="bulk-emails" class="form-label">
+                                    <i class="fas fa-envelope me-1"></i>Email Addresses
+                                    <span class="badge bg-success">85% Success</span>
+                                </label>
                                 <textarea id="bulk-emails" name="emails" class="form-control" rows="10" 
-                                          placeholder="john@company.com&#10;jane@company.com&#10;bob@company.com"></textarea>
-                                <div class="form-text">One email per line</div>
+                                        placeholder="david@surfe.com&#10;jane@company.com&#10;bob@tech.com"></textarea>
+                                <div class="form-text">Professional emails work best</div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="bulk-linkedin" class="form-label">LinkedIn URLs</label>
+                                <label for="bulk-linkedin" class="form-label">
+                                    <i class="fab fa-linkedin me-1"></i>LinkedIn URLs
+                                    <span class="badge bg-primary">95% Success</span>
+                                </label>
                                 <textarea id="bulk-linkedin" name="linkedin_urls" class="form-control" rows="10" 
-                                          placeholder="https://linkedin.com/in/john&#10;https://linkedin.com/in/jane"></textarea>
-                                <div class="form-text">One URL per line</div>
+                                        placeholder="https://linkedin.com/in/david-maurice-chevalier&#10;https://linkedin.com/in/jane-doe"></textarea>
+                                <div class="form-text">Highest success rate</div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="bulk-names" class="form-label">Full Names</label>
+                                <label for="bulk-names" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Full Names
+                                    <span class="badge bg-warning">Needs Company</span>
+                                </label>
                                 <textarea id="bulk-names" name="names" class="form-control" rows="10" 
-                                          placeholder="John Smith&#10;Jane Doe&#10;Bob Johnson"></textarea>
-                                <div class="form-text">One name per line</div>
+                                        placeholder="David Chevalier&#10;Jane Doe&#10;Bob Smith"></textarea>
+                                <div class="form-text">Combine with company data</div>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="bulk-companies" class="form-label">
+                                    <i class="fas fa-building me-1"></i>Company Names
+                                    <span class="badge bg-info">Improves Results</span>
+                                </label>
+                                <textarea id="bulk-companies" name="companies" class="form-control" rows="10" 
+                                        placeholder="Surfe&#10;Tech Solutions Inc&#10;Global Dynamics"></textarea>
+                                <div class="form-text">Matches with names above</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Include Options for Bulk -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-check-square me-2"></i>
+                                Bulk Enrichment Data Options
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="bulk-include-email" name="bulk-include-email" checked>
+                                        <label class="form-check-label" for="bulk-include-email">
+                                            <i class="fas fa-envelope me-1"></i>Email Address
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="bulk-include-mobile" name="bulk-include-mobile" checked>
+                                        <label class="form-check-label" for="bulk-include-mobile">
+                                            <i class="fas fa-mobile-alt me-1"></i>Phone Number
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="bulk-include-linkedin" name="bulk-include-linkedin">
+                                        <label class="form-check-label" for="bulk-include-linkedin">
+                                            <i class="fab fa-linkedin me-1"></i>LinkedIn URL
+                                            <span class="badge bg-warning ms-1">Setup Required</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="bulk-include-job-history" name="bulk-include-job-history">
+                                        <label class="form-check-label" for="bulk-include-job-history">
+                                            <i class="fas fa-briefcase me-1"></i>Job History
+                                            <span class="badge bg-warning ms-1">Setup Required</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mb-3">
+                        <small><i class="fas fa-lightbulb me-1"></i>
+                        <strong>Smart Pairing:</strong> Line 1 of names matches with line 1 of companies. Best results come from LinkedIn URLs or emails.
+                        </small>
                     </div>
                     
                     <button type="submit" class="btn btn-success">
@@ -323,18 +494,6 @@
                         Bulk Enrich Data
                     </button>
                 </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- API Selection Status -->
-    <div class="alert alert-success" role="alert">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-shield-alt me-3"></i>
-            <div>
-                <strong>Enhanced Data Enrichment:</strong> 
-                This service uses simple API management to provide comprehensive people enrichment 
-                with professional details, contact information, and social profiles.
             </div>
         </div>
     </div>
@@ -353,5 +512,14 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Bootstrap JS (if not in base.html) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SurfeApp shared utilities (MUST be loaded first) -->
+<script src="{{ url_for('static', filename='js/shared.js') }}"></script>
+<!-- App State Management (if you have it) -->
+<script src="{{ url_for('static', filename='js/appState.js') }}"></script>
+<!-- People Enrichment Utilities (MUST be loaded before main module) -->
+<script src="{{ url_for('static', filename='js/people_enrichment_utils.js') }}"></script>
+<!-- People Enrichment Main Module -->
 <script src="{{ url_for('static', filename='js/people_enrichment.js') }}"></script>
 {% endblock %}

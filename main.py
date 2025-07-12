@@ -1,4 +1,12 @@
-from app import app  # noqa: F401
+from dotenv import load_dotenv
+import os
+
+# FIX: This imports the function and then runs it immediately.
+load_dotenv()
+
+# Now that the environment is ready, the rest of the app can be imported.
+from app import app
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)

@@ -687,13 +687,17 @@ SurfeApp.api = {
      */
     request: async function (method, endpoint, data = null, options = {}) {
         const config = {
+            // 1. First, spread any miscellaneous options passed in
+            ...options,
+
+            // 2. Then, explicitly define the method and headers to ensure they are correct
             method: method.toUpperCase(),
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                // 3. Finally, add any custom headers from the options
                 ...options.headers
-            },
-            ...options
+            }
         };
 
         if (data && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PUT')) {
@@ -707,7 +711,6 @@ SurfeApp.api = {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), SurfeApp.config.requestTimeout);
-
             config.signal = controller.signal;
 
             const response = await fetch(url, config);
@@ -715,14 +718,24 @@ SurfeApp.api = {
 
             console.log(`📡 API Response: ${response.status} for ${url}`);
 
-            if (!response.ok) {
-                const errorData = await this.parseErrorResponse(response);
-                throw new Error(`HTTP ${response.status}: ${errorData.message || errorData.error || 'Unknown error'}`);
+            // FIXED: Parse response body before throwing error
+            let responseData;
+            try {
+                responseData = await response.json();
+            } catch (e) {
+                responseData = { error: `HTTP ${response.status}`, message: response.statusText };
             }
 
-            const result = await response.json();
-            console.log(`✅ API Success: ${url}`, result);
-            return result;
+            if (!response.ok) {
+                // FIXED: Create error with structured data attached
+                const error = new Error(responseData.error || responseData.message || `HTTP ${response.status}`);
+                error.status = response.status;
+                error.responseData = responseData; // Attach the structured error data
+                throw error;
+            }
+
+            console.log(`✅ API Success: ${url}`, responseData);
+            return responseData;
 
         } catch (error) {
             console.error(`❌ API Error:`, error);
@@ -745,22 +758,82 @@ SurfeApp.api = {
     },
 
     /**
-     * Specific API methods
+     * Specific API methods - FIXED VERSION
      */
     searchPeople: function (searchData) {
-        return this.request('POST', '/v2/people/search', searchData);
+        return this.request('POST', '/v2/people/search', searchData);  // ✅ Removed /api
     },
 
     searchCompanies: function (searchData) {
-        return this.request('POST', '/v1/companies/search', searchData);
+        return this.request('POST', '/v2/companies/search', searchData);  // ✅ Removed /api
     },
 
     getHealthCheck: function () {
-        return this.request('GET', '/health');
+        return this.request('GET', '/health');  // ✅ Keep as is (no /api in Flask)
     },
 
     getStats: function () {
-        return this.request('GET', '/stats');
+        return this.request('GET', '/stats');  // ✅ Removed /api
+    },
+
+    // People enrichment methods
+    enrichPeople: function (enrichData) {
+        return this.request('POST', '/v2/people/enrich', enrichData);  // ✅ Removed /api
+    },
+
+    enrichPeopleBulk: function (enrichData) {
+        return this.request('POST', '/v2/people/enrich/bulk', enrichData);  // ✅ Removed /api
+    },
+
+    getPeopleEnrichmentStatus: function (enrichmentId) {
+        return this.request('GET', `/v2/people/enrich/status/${enrichmentId}`);  // ✅ Added /status + removed /api
+    },
+
+    // Company enrichment methods  
+    enrichCompanies: function (enrichData) {
+        return this.request('POST', '/v2/companies/enrich', enrichData);  // ✅ Already correct
+    },
+
+    enrichCompaniesBulk: function (enrichData) {
+        return this.request('POST', '/v2/companies/enrich/bulk', enrichData);  // ✅ Already correct
+    },
+
+    getCompanyEnrichmentStatus: function (enrichmentId) {
+        return this.request('GET', `/v2/companies/enrich/status/${enrichmentId}`);  // ✅ Added /status
+    },
+
+    // Settings API methods
+    getSettingsConfig: function () {
+        return this.request('GET', '/settings/config');  // ✅ Removed /api
+    },
+
+    addApiKey: function (keyData) {
+        return this.request('POST', '/settings/keys', keyData);  // ✅ Removed /api
+    },
+
+    removeApiKey: function (keyData) {
+        return this.request('DELETE', '/settings/keys', keyData);  // ✅ Removed /api
+    },
+
+    updateKeyStatus: function (statusData) {
+        return this.request('POST', '/settings/keys/status', statusData);  // ✅ Removed /api
+    },
+
+    selectApiKey: function (keyData) {
+        return this.request('POST', '/settings/select', keyData);  // ✅ Removed /api
+    },
+
+    testApiKey: function (testData) {
+        return this.request('POST', '/settings/test', testData);  // ✅ Removed /api
+    },
+
+    refreshApiKeys: function () {
+        return this.request('POST', '/settings/refresh');  // ✅ Removed /api
+    },
+
+    // Diagnostics
+    getPerformanceMetrics: function () {
+        return this.request('GET', '/api/diagnostics/performance');  // ✅ Keep as is (no /api in Flask)
     }
 };
 
@@ -900,33 +973,30 @@ SurfeApp.ui = {
     },
 
     /**
-     * Update health indicator
-     */
+    * Update health indicator
+    */
     updateHealthIndicator: function (stats) {
         const healthElement = document.getElementById('health-indicator');
-        if (!healthElement) return;
+        if (!healthElement || !stats) return;
 
-        const healthPercentage = stats.success_rate || 0;
-        const activeKeys = stats.active_keys || 0;
+        // Logic is now based on whether a valid key is selected.
+        const isReady = stats.has_valid_selection;
+        const enabledKeys = stats.enabled_keys || 0;
         const totalKeys = stats.total_keys || 0;
 
         let statusClass, statusText, statusIcon;
 
-        if (healthPercentage >= 80) {
+        if (isReady) {
             statusClass = 'status-active';
-            statusText = 'Excellent';
+            statusText = 'Ready';
             statusIcon = 'fas fa-check-circle';
-        } else if (healthPercentage >= 60) {
+        } else if (totalKeys > 0) {
             statusClass = 'status-warning';
-            statusText = 'Good';
-            statusIcon = 'fas fa-exclamation-circle';
-        } else if (healthPercentage > 0) {
-            statusClass = 'status-warning';
-            statusText = 'Degraded';
+            statusText = 'Needs Selection';
             statusIcon = 'fas fa-exclamation-triangle';
         } else {
             statusClass = 'status-disabled';
-            statusText = 'Critical';
+            statusText = 'No Keys';
             statusIcon = 'fas fa-times-circle';
         }
 
@@ -937,7 +1007,7 @@ SurfeApp.ui = {
                 ${statusText}
             </div>
             <small class="text-muted d-block mt-1">
-                ${activeKeys}/${totalKeys} keys active
+                ${enabledKeys}/${totalKeys} keys enabled
             </small>
         `;
     }
@@ -1263,6 +1333,42 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error('Unhandled promise rejection:', event.reason);
         SurfeApp.ui.showToast('An unexpected error occurred', 'error');
     });
+
+
+    // =================================================================
+    //  NEW CODE BLOCK TO ADD
+    // =================================================================
+    // Connect the global health indicator to the state manager
+    if (window.appState && document.getElementById('health-indicator')) {
+        // 1. Subscribe to any future state changes
+        window.appState.subscribe(SurfeApp.ui.updateHealthIndicator);
+
+        // 2. Fetch the initial state when the page first loads
+        // FIXED: Corrected the endpoint path
+        SurfeApp.api.request('GET', '/settings/config', null, {
+            headers: { 'X-User-ID': localStorage.getItem('userId') || 'default-user-id' }
+        })
+        .then(data => {
+            if (data.success && data.data.api_manager) {
+                // Update the central state, which will automatically update the indicator
+                window.appState.updateStatus(data.data.api_manager);
+            }
+        })
+        .catch(err => {
+            console.error("Failed to load initial health status:", err);
+            // If the initial fetch fails, show an error in the indicator
+            const indicator = document.getElementById('health-indicator');
+            if(indicator) {
+                indicator.innerHTML = `
+                    <div class="status-badge status-disabled">
+                        <i class="fas fa-times-circle me-1"></i>Error
+                    </div>`;
+            }
+        });
+    }
+    // =================================================================
+    //  END OF NEW CODE BLOCK
+    // =================================================================
 });
 
 // Clean up on page unload and visibility change

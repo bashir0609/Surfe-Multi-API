@@ -1,78 +1,191 @@
 /**
  * =====================================================================
- * People Enrichment Module - Handles people enrichment functionality
- * Features: Manual entry, CSV upload, bulk processing, results display
+ * People Enrichment Main Module
+ * Handles combinations, forms, and orchestrates the enrichment process
  * =====================================================================
  */
 (function() {
     'use strict';
 
-    /**
-     * =====================================================================
-     * Configuration and State
-     * =====================================================================
-     */
-    const config = {
-        maxFileSize: 5 * 1024 * 1024, // 5MB
-        supportedFormats: ['.csv'],
-        endpoints: {
-            enrich: '/v2/people/enrich',
-            enrichBulk: '/v2/people/enrich/bulk'
-        }
-    };
-
-    let currentInputMethod = 'manual';
+    // Global variables
     let enrichmentResults = [];
+    let enrichmentCombinations = [];
+    let includeOptions = {};
 
     /**
      * =====================================================================
-     * Initialize People Enrichment
+     * Initialization
      * =====================================================================
      */
-    function initializePeopleEnrichment() {
-        console.log('🚀 Initializing People Enrichment module');
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Initializing People Enrichment with Combinations');
         
-        setupInputMethodSwitching();
-        setupEventListeners();
-        setupFormValidation();
-        
-        console.log('✅ People Enrichment module initialized');
+        // Check dependencies
+        if (typeof SurfeApp === 'undefined') {
+            console.error('❌ SurfeApp not found! Please ensure shared.js is loaded first.');
+            showError('SurfeApp is not available. Please refresh the page.');
+            return;
+        }
+
+        if (typeof PeopleEnrichmentUtils === 'undefined') {
+            console.error('❌ PeopleEnrichmentUtils not found! Please ensure people_enrichment_utils.js is loaded first.');
+            showError('Utilities not available. Please refresh the page.');
+            return;
+        }
+
+        initializeModule();
+    });
+
+    async function initializeModule() {
+        try {
+            PeopleEnrichmentUtils.addCustomStyles();
+            await loadEnrichmentCombinations();
+            setupEventListeners();
+            updateIncludeFieldsUI();
+            
+            // Initialize with manual input active
+            PeopleEnrichmentUtils.switchInputMethod('manual');
+            
+            console.log('✅ People Enrichment module fully initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize module:', error);
+            showError('Failed to initialize enrichment module. Please refresh the page.');
+        }
     }
 
     /**
      * =====================================================================
-     * Input Method Switching
+     * Load and Display Valid Combinations
      * =====================================================================
      */
-    function setupInputMethodSwitching() {
-        const methodCards = document.querySelectorAll('.input-method-card');
-        const inputSections = document.querySelectorAll('.input-section');
-
-        methodCards.forEach(card => {
-            card.addEventListener('click', function() {
-                const method = this.dataset.method;
-                switchInputMethod(method);
-            });
-        });
+    async function loadEnrichmentCombinations() {
+        try {
+            console.log('📥 Loading enrichment combinations...');
+            
+            const response = await SurfeApp.api.request('GET', '/v2/people/enrich/combinations');
+            
+            if (response.success && response.data) {
+                enrichmentCombinations = response.data.combinations || [];
+                includeOptions = response.data.include_options || {};
+                
+                console.log('✅ Loaded', enrichmentCombinations.length, 'combinations');
+                
+                renderCombinations();
+                renderIncludeOptions();
+                
+            } else {
+                console.warn('⚠️ Failed to load combinations:', response.error);
+                setupFallbackCombinations();
+            }
+        } catch (error) {
+            console.error('❌ Error loading combinations:', error);
+            setupFallbackCombinations();
+        }
     }
 
-    function switchInputMethod(method) {
-        currentInputMethod = method;
+    function setupFallbackCombinations() {
+        console.log('📋 Setting up fallback combinations');
+        enrichmentCombinations = [
+            {
+                id: 'linkedin_only',
+                name: 'LinkedIn URL Only',
+                description: 'Best results - Direct LinkedIn profile enrichment',
+                fields: ['linkedinUrl'],
+                accuracy: 'Very High',
+                success_rate: '95%'
+            },
+            {
+                id: 'email_only',
+                name: 'Email Address Only', 
+                description: 'High accuracy enrichment using professional email',
+                fields: ['email'],
+                accuracy: 'High',
+                success_rate: '85%'
+            },
+            {
+                id: 'name_company',
+                name: 'Name + Company Name',
+                description: 'Good results when you have full name and company',
+                fields: ['firstName', 'lastName', 'companyName'],
+                accuracy: 'High',
+                success_rate: '80%'
+            }
+        ];
+        renderCombinations();
+    }
+
+    function renderCombinations() {
+        const container = document.getElementById('combinations-container');
+        if (!container) {
+            console.log('📋 No combinations container found, skipping render');
+            return;
+        }
         
-        // Update active card
-        document.querySelectorAll('.input-method-card').forEach(card => {
-            card.classList.remove('active');
-        });
-        document.querySelector(`[data-method="${method}"]`).classList.add('active');
-        
-        // Show corresponding input section
-        document.querySelectorAll('.input-section').forEach(section => {
-            section.classList.remove('active');
-        });
-        document.getElementById(`${method}-input`).classList.add('active');
-        
-        // Clear previous results if switching methods
-        clearResults();
+        if (enrichmentCombinations.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted p-3">No combinations data available</div>';
+            return;
+        }
+
+        const combinationsHtml = enrichmentCombinations.map(combo => `
+            <div class="combination-card" data-combination="${combo.id}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">${combo.name}</h6>
+                    <div>
+                        <span class="badge accuracy-badge ${getAccuracyBadgeClass(combo.accuracy)} me-1">${combo.accuracy}</span>
+                        <span class="badge bg-info">${combo.success_rate}</span>
+                    </div>
+                </div>
+                
+                <p class="small text-muted mb-3">${combo.description}</p>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="small mb-1"><strong>Required Fields:</strong></div>
+                        ${combo.fields.map(field => `<span class="badge bg-danger field-tag">${formatFieldName(field)}</span>`).join('')}
+                    </div>
+                    ${combo.optional_fields && combo.optional_fields.length > 0 ? `
+                    <div class="col-md-6">
+                        <div class="small mb-1"><strong>Optional Fields:</strong></div>
+                        ${combo.optional_fields.map(field => `<span class="badge bg-success field-tag">${formatFieldName(field)}</span>`).join('')}
+                    </div>
+                    ` : ''}
+                </div>
+                
+                ${combo.example ? `
+                <div class="example-code mb-2">
+                    <strong>Example:</strong><br>
+                    ${formatExample(combo.example)}
+                </div>
+                ` : ''}
+                
+                ${combo.note ? `<div class="small text-info"><i class="fas fa-info-circle me-1"></i>${combo.note}</div>` : ''}
+            </div>
+        `).join('');
+
+        container.innerHTML = combinationsHtml;
+    }
+
+    function renderIncludeOptions() {
+        const container = document.getElementById('include-options-container');
+        if (!container || !includeOptions || Object.keys(includeOptions).length === 0) {
+            console.log('📋 No include options container or data found, skipping render');
+            return;
+        }
+
+        const optionsHtml = Object.entries(includeOptions).map(([key, option]) => `
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="include-${key}" name="include-${key}" ${option.default ? 'checked' : ''} ${option.requires_setup ? 'disabled' : ''}>
+                    <label class="form-check-label" for="include-${key}">
+                        <strong>${formatFieldName(key)}</strong>
+                        ${option.requires_setup ? '<span class="badge bg-warning ms-1">Setup Required</span>' : ''}
+                    </label>
+                    <div class="form-text">${option.description}${option.note ? ` - ${option.note}` : ''}</div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `<div class="row">${optionsHtml}</div>`;
     }
 
     /**
@@ -81,555 +194,294 @@
      * =====================================================================
      */
     function setupEventListeners() {
-        // Manual enrichment form
-        const manualForm = document.getElementById('people-enrichment-form');
-        if (manualForm) {
-            manualForm.addEventListener('submit', handleManualEnrichment);
+        console.log('🔧 Setting up event listeners...');
+
+        // Form handlers
+        const peopleForm = document.getElementById('people-enrichment-form');
+        if (peopleForm) {
+            peopleForm.addEventListener('submit', handleManualEnrichment);
         }
 
-        // CSV upload form
         const csvForm = document.getElementById('csv-upload-form');
         if (csvForm) {
             csvForm.addEventListener('submit', handleCsvUpload);
         }
 
-        // Bulk enrichment form
+        const csvFileInput = document.getElementById('csv-file');
+        if (csvFileInput) {
+            csvFileInput.addEventListener('change', handleCsvFileChange);
+        }
+
         const bulkForm = document.getElementById('bulk-enrichment-form');
         if (bulkForm) {
             bulkForm.addEventListener('submit', handleBulkEnrichment);
         }
 
-        // Reset buttons
-        document.querySelectorAll('#reset-form').forEach(btn => {
-            btn.addEventListener('click', resetCurrentForm);
-        });
+        // UI controls
+        PeopleEnrichmentUtils.setupInputMethodSwitching();
 
-        // File input validation
-        const fileInput = document.getElementById('csv-file');
-        if (fileInput) {
-            fileInput.addEventListener('change', validateFileInput);
+        const resetBtn = document.getElementById('reset-form');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                resetCurrentForm();
+            });
         }
+
+        const toggleBtn = document.getElementById('toggle-combinations');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleCombinationsDisplay);
+        }
+
+        const validateBtn = document.getElementById('validate-combination');
+        if (validateBtn) {
+            validateBtn.addEventListener('click', validateCurrentCombination);
+        }
+
+        console.log('✅ All event listeners setup complete');
     }
 
     /**
      * =====================================================================
-     * Form Validation
-     * =====================================================================
-     */
-    function setupFormValidation() {
-        // Real-time validation for email fields
-        const emailInputs = document.querySelectorAll('input[type="email"]');
-        emailInputs.forEach(input => {
-            input.addEventListener('blur', validateEmailField);
-        });
-
-        // URL validation
-        const urlInputs = document.querySelectorAll('input[type="url"]');
-        urlInputs.forEach(input => {
-            input.addEventListener('blur', validateUrlField);
-        });
-    }
-
-    function validateEmailField(event) {
-        const input = event.target;
-        const email = input.value.trim();
-        
-        if (email && !SurfeApp.utils.isValidEmail(email)) {
-            SurfeApp.forms.showFieldError(input, 'Please enter a valid email address');
-        } else {
-            SurfeApp.forms.clearFieldError(input);
-        }
-    }
-
-    function validateUrlField(event) {
-        const input = event.target;
-        const url = input.value.trim();
-        
-        if (url && !SurfeApp.utils.isValidUrl(url)) {
-            SurfeApp.forms.showFieldError(input, 'Please enter a valid URL');
-        } else {
-            SurfeApp.forms.clearFieldError(input);
-        }
-    }
-
-    function validateFileInput(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const validation = SurfeApp.utils.validateCSVFile(file, config.maxFileSize);
-        
-        if (!validation.valid) {
-            SurfeApp.ui.showToast(validation.errors.join(', '), 'error');
-            event.target.value = '';
-            return;
-        }
-
-        SurfeApp.ui.showToast('File validated successfully', 'success');
-    }
-
-    /**
-     * =====================================================================
-     * Enrichment Handlers
+     * Form Handlers
      * =====================================================================
      */
     async function handleManualEnrichment(event) {
         event.preventDefault();
+        console.log('🎯 Manual enrichment with combinations validation');
         
-        const formData = SurfeApp.forms.serializeForm(event.target);
-        
-        // Validate required fields
-        if (!validateManualForm(formData)) {
-            return;
-        }
-
-        // Prepare enrichment data according to Surfe API v2 format
-        const includeConfig = {
-            email: document.getElementById('include-email').checked,
-            linkedInUrl: document.getElementById('include-linkedin').checked,
-            mobile: document.getElementById('include-mobile').checked
-        };
-        
-        // Validate that at least one field is included (required by API)
-        if (!includeConfig.email && !includeConfig.linkedInUrl && !includeConfig.mobile) {
-            SurfeApp.ui.showToast('At least one field must be selected in "Data to Include"', 'error');
-            return;
-        }
-        
-        // Clean company domain if provided
-        let companyDomain = formData['company-domain'] || '';
-        if (companyDomain) {
-            companyDomain = SurfeApp.utils.cleanDomain(companyDomain);
-            if (!SurfeApp.utils.isValidDomain(companyDomain)) {
-                SurfeApp.ui.showToast('Please provide a valid company domain (e.g., acme.com)', 'error');
+        try {
+            const formData = new FormData(event.target);
+            
+            const rawPerson = {
+                firstName: formData.get('first-name') || '',
+                lastName: formData.get('last-name') || '',
+                companyName: formData.get('company-name') || '',
+                companyDomain: formData.get('company-domain') || '',
+                linkedinUrl: formData.get('linkedin-url') || '',
+                externalID: formData.get('external-id') || ''
+            };
+            
+            const cleanedPerson = PeopleEnrichmentUtils.cleanPersonData(rawPerson);
+            const validation = PeopleEnrichmentUtils.validatePersonData(cleanedPerson);
+            
+            if (!validation.valid) {
+                showValidationErrors(validation.errors);
                 return;
             }
-        }
-        
-        const enrichmentData = {
-            include: includeConfig,
-            people: [{
-                firstName: formData['first-name'] || '',
-                lastName: formData['last-name'] || '',
-                companyName: formData['company-name'] || '',
-                companyDomain: companyDomain,
-                linkedinUrl: formData['linkedin-url'] || '',
-                externalID: formData['external-id'] || ''
-            }]
-        };
-        
-        // Add notificationOptions if webhook URL is provided
-        const webhookUrl = formData['webhook-url'];
-        if (webhookUrl && webhookUrl.trim()) {
-            enrichmentData.notificationOptions = {
-                webhookUrl: webhookUrl.trim()
+            
+            if (validation.confidence < 60) {
+                const proceed = confirm(
+                    `This enrichment has ${validation.confidence}% confidence. ` +
+                    'Results may be limited. Do you want to proceed?'
+                );
+                if (!proceed) return;
+            }
+            
+            const enrichmentRequest = {
+                include: getIncludeOptions('manual'),
+                people: [cleanedPerson]
             };
+            
+            const webhookUrl = formData.get('webhook-url');
+            if (webhookUrl) {
+                enrichmentRequest.notificationOptions = { webhookUrl };
+            }
+            
+            await performEnrichment(enrichmentRequest);
+            
+        } catch (error) {
+            console.error('❌ Manual enrichment failed:', error);
+            showError(`Enrichment failed: ${error.message}`);
         }
-
-        await performEnrichment(enrichmentData, 'manual');
     }
 
     async function handleCsvUpload(event) {
         event.preventDefault();
+        console.log('📁 CSV upload with combinations validation');
         
-        const fileInput = document.getElementById('csv-file');
-        const file = fileInput.files[0];
-        
-        if (!file) {
-            SurfeApp.ui.showToast('Please select a CSV file', 'error');
-            return;
+        try {
+            const fileInput = document.getElementById('csv-file');
+            const file = fileInput.files[0];
+            
+            const validation = SurfeApp.utils.validateCSVFile(file, 10 * 1024 * 1024);
+            if (!validation.valid) {
+                showError(validation.errors.join('\n'));
+                return;
+            }
+
+            const csvIncludeValidation = validateIncludeOptions('csv');
+            if (!csvIncludeValidation.valid) {
+                showError(csvIncludeValidation.error);
+                return;
+            }
+
+            PeopleEnrichmentUtils.showLoading('Reading and parsing CSV file...');
+
+            const parsedData = await SurfeApp.utils.readCSVFile(file);
+            console.log('📊 CSV parsed:', parsedData.length, 'rows');
+
+            if (parsedData.length === 0 || parsedData.length > PeopleEnrichmentUtils.API_VALIDATION_RULES.MAX_PEOPLE) {
+                showError(parsedData.length === 0 ? 'No valid data found in CSV file.' : `CSV contains ${parsedData.length} people. Maximum allowed is ${PeopleEnrichmentUtils.API_VALIDATION_RULES.MAX_PEOPLE}.`);
+                return;
+            }
+
+            const people = PeopleEnrichmentUtils.convertCsvToPeople(parsedData);
+            const validationResults = PeopleEnrichmentUtils.validateCsvPeople(people);
+
+            if (validationResults.valid.length === 0) {
+                showError('No valid records found in CSV.');
+                return;
+            }
+
+            if (validationResults.invalid.length > 0) {
+                const proceed = confirm(
+                    `Found ${validationResults.valid.length} valid and ${validationResults.invalid.length} invalid records. ` +
+                    'Proceed with valid records only?'
+                );
+                if (!proceed) {
+                    PeopleEnrichmentUtils.clearResults();
+                    return;
+                }
+            }
+
+            const enrichmentRequest = {
+                include: getIncludeOptions('csv'),
+                people: validationResults.valid
+            };
+
+            await performEnrichment(enrichmentRequest);
+            
+        } catch (error) {
+            console.error('❌ CSV upload failed:', error);
+            showError(`CSV upload failed: ${error.message}`);
         }
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        await performEnrichmentWithFile(formData, 'csv');
     }
 
     async function handleBulkEnrichment(event) {
         event.preventDefault();
+        console.log('📝 Bulk enrichment with combinations validation');
         
-        const formData = SurfeApp.forms.serializeForm(event.target);
-        
-        // Parse bulk input according to Surfe API v2 format
-        const includeConfig = {
-            email: document.getElementById('include-email').checked,
-            linkedInUrl: document.getElementById('include-linkedin').checked,
-            mobile: document.getElementById('include-mobile').checked
-        };
-        
-        // Validate that at least one field is included (required by API)
-        if (!includeConfig.email && !includeConfig.linkedInUrl && !includeConfig.mobile) {
-            SurfeApp.ui.showToast('At least one field must be selected in "Data to Include"', 'error');
-            return;
-        }
-        
-        const enrichmentData = {
-            include: includeConfig,
-            people: []
-        };
-
-        // Parse names into people objects
-        const names = SurfeApp.utils.parseTextareaLines(formData.names);
-        const emails = SurfeApp.utils.parseTextareaLines(formData.emails);
-        const linkedinUrls = SurfeApp.utils.parseTextareaLines(formData.linkedin_urls);
-
-        // Create people objects with available data
-        const maxLength = Math.max(names.length, emails.length, linkedinUrls.length);
-        for (let i = 0; i < maxLength; i++) {
-            const person = {};
-            
-            // Parse name if available
-            if (names[i]) {
-                const nameParts = names[i].trim().split(' ');
-                person.firstName = nameParts[0] || '';
-                person.lastName = nameParts.slice(1).join(' ') || '';
-            }
-            
-            // Add other fields if available
-            if (emails[i]) person.email = emails[i].trim();
-            if (linkedinUrls[i]) person.linkedinUrl = linkedinUrls[i].trim();
-            
-            // Add external ID based on index
-            person.externalID = `bulk-${i + 1}`;
-            
-            enrichmentData.people.push(person);
-        }
-
-        // Validate array size (1-10000 people according to API spec)
-        if (enrichmentData.people.length === 0) {
-            SurfeApp.ui.showToast('At least one person is required for enrichment', 'error');
-            return;
-        }
-        
-        if (enrichmentData.people.length > 10000) {
-            SurfeApp.ui.showToast('Maximum 10,000 people allowed per enrichment request', 'error');
-            return;
-        }
-
-        // Add notificationOptions if webhook URL is provided
-        const webhookUrl = formData['webhook-url'];
-        if (webhookUrl && webhookUrl.trim()) {
-            enrichmentData.notificationOptions = {
-                webhookUrl: webhookUrl.trim()
-            };
-        }
-
-        // Validate bulk data
-        if (!validateBulkData(enrichmentData)) {
-            return;
-        }
-
-        await performEnrichment(enrichmentData, 'bulk');
-    }
-
-    /**
-     * =====================================================================
-     * Enrichment Processing
-     * =====================================================================
-     */
-    async function performEnrichment(data, method) {
-        const resultsContainer = document.getElementById('enrichment-results');
-        SurfeApp.ui.showLoading(resultsContainer, 'Enriching people data...');
-
         try {
-            const response = await SurfeApp.api.request(
-                'POST',
-                config.endpoints.enrich,
-                data
-            );
-
-            // if (response.success) {
-            //     enrichmentResults = response.data.people || [];
-            //     displayEnrichmentResults(enrichmentResults, method);
-            //     SurfeApp.ui.showToast(
-            //         `Successfully enriched ${enrichmentResults.length} people`, 
-            //         'success'
-            //     );
-            // } else {
-            //     throw new Error(response.error || 'Enrichment failed');
-            // }
-
-            // The key is likely 'enrichmentID' based on the API's async design
-            if (response.success && response.data && response.data.enrichmentID) {
-                SurfeApp.ui.showToast('Enrichment job started successfully!', 'info');
-                // This new line calls the polling function we will add next
-                pollForResults(response.data.enrichmentID, method); 
-            } else {
-                throw new Error(response.error || 'Failed to start enrichment job.');
-            }
-        } catch (error) {
-        console.error('Enrichment error:', error);
-        const resultsContainer = document.getElementById('enrichment-results');
-        let errorTitle = 'Enrichment Failed';
-        let friendlyMessage = `Enrichment failed: ${error.message}`;
-
-        // Check for the specific "feature_not_available" error from the API
-        if (error.message && error.message.includes('feature_not_available')) {
-            try {
-                // Extract the JSON part of the error string for parsing
-                const jsonString = error.message.substring(error.message.indexOf('{'));
-                const errorDetails = JSON.parse(jsonString);
-
-                errorTitle = 'Feature Not Available';
-
-                // Create a user-friendly, formatted HTML message
-                friendlyMessage = `
-                    <div class="alert alert-warning text-start" role="alert">
-                        <h6 class="alert-heading">${errorDetails.message}</h6>
-                        <p class="mb-0">${errorDetails.action}</p>
-                    </div>
-                `;
-
-                // Display the custom error directly in the results container
-                const errorHtml = `
-                    <div class="error-state">
-                        <div class="empty-icon text-warning">
-                            <i class="fas fa-lock"></i>
-                        </div>
-                        <h5 class="mb-3">${errorTitle}</h5>
-                        ${friendlyMessage}
-                        <button class="btn btn-outline-primary mt-3" onclick="location.reload()">
-                            <i class="fas fa-sync me-2"></i>Try Again
-                        </button>
-                    </div>
-                `;
-                resultsContainer.innerHTML = errorHtml;
-                SurfeApp.ui.showToast(errorTitle, 'error');
-                return; // Stop further execution to avoid double-displaying errors
-
-                } catch (e) {
-                    // Fallback to the generic message if JSON parsing fails
-                    friendlyMessage = `Enrichment failed: ${error.message}`;
-                }
-            }
-
-            // For all other errors, use the standard error display
-            SurfeApp.ui.showError(resultsContainer, friendlyMessage, errorTitle);
-            SurfeApp.ui.showToast(errorTitle, 'error');
-        }
-    }
-
-    async function performEnrichmentWithFile(formData, method) {
-        const resultsContainer = document.getElementById('enrichment-results');
-        SurfeApp.ui.showLoading(resultsContainer, 'Processing CSV and enriching data...');
-
-        try {
-            // Get selected key from localStorage
-            const selectedKey = localStorage.getItem('surfe_selected_key');
-            
-            const response = await fetch(config.endpoints.enrichBulk, {
-                method: 'POST',
-                headers: {
-                    'X-Selected-Key': selectedKey || '', // Add this header
-                },
-                body: formData // Note: Don't set Content-Type for FormData
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                enrichmentResults = result.data.people || [];
-                displayEnrichmentResults(enrichmentResults, method);
-                SurfeApp.ui.showToast(
-                    `Successfully processed ${enrichmentResults.length} people from CSV`, 
-                    'success'
-                );
-            } else {
-                throw new Error(result.error || 'CSV processing failed');
-            }
-        } catch (error) {
-            console.error('CSV enrichment error:', error);
-            SurfeApp.ui.showError(resultsContainer, `CSV processing failed: ${error.message}`);
-            SurfeApp.ui.showToast('CSV processing failed', 'error');
-        }
-    }
-
-    async function performEnrichment(data, method) {
-        const resultsContainer = document.getElementById('enrichment-results');
-        SurfeApp.ui.showLoading(resultsContainer, 'Submitting enrichment request...');
-
-        try {
-            // Get selected key from localStorage
-            const selectedKey = localStorage.getItem('surfe_selected_key');
-            
-            console.log('🔑 People enrichment using selected key:', selectedKey || 'default');
-            
-            // This now correctly expects an async response
-            const response = await fetch(config.endpoints.enrich, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Selected-Key': selectedKey || '', // Add this header
-                },
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            // The key is likely 'enrichmentID' based on the company enrichment flow
-            if (result.success && result.data && result.data.enrichmentID) {
-                SurfeApp.ui.showToast('Enrichment job started successfully!', 'info');
-                pollForResults(result.data.enrichmentID, method);
-            } else {
-                throw new Error(result.error || 'Failed to start enrichment job.');
-            }
-        } catch (error) {
-            console.error('Enrichment error:', error);
-            SurfeApp.ui.showError(resultsContainer, `Enrichment failed: ${error.message}`);
-            SurfeApp.ui.showToast('Enrichment failed', 'error');
-        }
-    }
-
-
-    function pollForResults(enrichmentID, method) {
-        const resultsContainer = document.getElementById('enrichment-results');
-        SurfeApp.ui.showLoading(resultsContainer, 'Processing enrichment... This may take a moment.');
-
-        let attempts = 0;
-        const maxAttempts = 15; // Poll for a maximum of 30 seconds
-        const interval = 2000;  // Check every 2 seconds
-
-        const intervalId = setInterval(async () => {
-            if (attempts >= maxAttempts) {
-                clearInterval(intervalId);
-                SurfeApp.ui.showError(resultsContainer, 'Enrichment request timed out. Please try again.');
+            const bulkIncludeValidation = validateIncludeOptions('bulk');
+            if (!bulkIncludeValidation.valid) {
+                showError(bulkIncludeValidation.error);
                 return;
             }
 
-            try {
-                // This calls your backend route that checks the job status
-                const statusResponse = await SurfeApp.api.request('GET', `/v2/people/enrich/status/${enrichmentID}`);
+            const emailLines = SurfeApp.utils.parseTextareaLines(document.getElementById('bulk-emails')?.value || '');
+            const linkedinLines = SurfeApp.utils.parseTextareaLines(document.getElementById('bulk-linkedin')?.value || '');
+            const nameLines = SurfeApp.utils.parseTextareaLines(document.getElementById('bulk-names')?.value || '');
+            const companyLines = SurfeApp.utils.parseTextareaLines(document.getElementById('bulk-companies')?.value || '');
+            
+            const people = [];
+            const maxEntries = Math.max(emailLines.length, linkedinLines.length, nameLines.length, companyLines.length);
+            
+            for (let i = 0; i < maxEntries; i++) {
+                const person = {};
                 
-                if (statusResponse.success && statusResponse.status === 'completed') {
-                    clearInterval(intervalId);
-                    enrichmentResults = statusResponse.data || [];
-                    // This calls your existing function to display the final results
-                    displayEnrichmentResults(enrichmentResults, method);
-                    SurfeApp.ui.showToast('Enrichment complete!', 'success');
+                if (emailLines[i] && SurfeApp.utils.isValidEmail(emailLines[i])) {
+                    person.email = emailLines[i];
                 }
-            } catch (error) {
-                clearInterval(intervalId);
-                SurfeApp.ui.showError(resultsContainer, `Error fetching results: ${error.message}`);
+                
+                if (linkedinLines[i] && linkedinLines[i].includes('linkedin')) {
+                    let cleanUrl = linkedinLines[i];
+                    if (!cleanUrl.startsWith('http')) {
+                        cleanUrl = 'https://' + cleanUrl;
+                    }
+                    if (SurfeApp.utils.isValidUrl(cleanUrl)) {
+                        person.linkedinUrl = cleanUrl;
+                    }
+                }
+                
+                if (nameLines[i]) {
+                    const nameParts = nameLines[i].split(' ');
+                    person.firstName = nameParts[0] || '';
+                    person.lastName = nameParts.slice(1).join(' ') || '';
+                }
+                
+                if (companyLines[i]) {
+                    person.companyName = companyLines[i];
+                }
+                
+                if (Object.keys(person).length > 0) {
+                    people.push(person);
+                }
             }
-            attempts++;
-        }, interval);
+            
+            if (people.length === 0) {
+                showError('Please enter at least one email, LinkedIn URL, name, or company');
+                return;
+            }
+
+            const validationResults = PeopleEnrichmentUtils.validateBulkPeople(people);
+            
+            if (validationResults.valid.length === 0) {
+                showError('No valid entries found.');
+                return;
+            }
+
+            if (validationResults.invalid.length > 0) {
+                const proceed = confirm(
+                    `Found ${validationResults.valid.length} valid and ${validationResults.invalid.length} invalid entries. ` +
+                    'Proceed with valid entries only?'
+                );
+                if (!proceed) return;
+            }
+            
+            const enrichmentData = {
+                include: getIncludeOptions('bulk'),
+                people: validationResults.valid
+            };
+            
+            await performEnrichment(enrichmentData);
+            
+        } catch (error) {
+            console.error('❌ Bulk enrichment failed:', error);
+            showError(`Bulk enrichment failed: ${error.message}`);
+        }
     }
 
-    /**
-     * =====================================================================
-     * Results Display
-     * =====================================================================
-     */
-    function displayEnrichmentResults(results, method) {
-        const resultsContainer = document.getElementById('enrichment-results');
-        
-        if (!results || results.length === 0) {
-            SurfeApp.ui.showEmpty(resultsContainer, 'No enrichment results found');
+    function handleCsvFileChange(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const validation = SurfeApp.utils.validateCSVFile(file);
+        if (!validation.valid) {
+            showError(validation.errors.join('\n'));
             return;
         }
 
-        const resultsHtml = `
-            <div class="results-header">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h4><i class="fas fa-user-plus me-2"></i>Enrichment Results</h4>
-                        <p class="text-muted mb-0">${results.length} people enriched via ${method} input</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button onclick="exportResults('csv')" class="btn btn-outline-success btn-sm">
-                            <i class="fas fa-file-csv me-1"></i>Export CSV
-                        </button>
-                        <button onclick="exportResults('json')" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-file-code me-1"></i>Export JSON
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="enrichment-grid">
-                ${results.map(person => createPersonCard(person)).join('')}
-            </div>
-        `;
-
-        resultsContainer.innerHTML = resultsHtml;
+        console.log('📁 CSV file selected:', file.name, 'Size:', PeopleEnrichmentUtils.formatFileSize(file.size));
     }
 
-    function createPersonCard(person) {
-        // Handle multiple possible field name formats from API
-        const firstName = person.firstName || person.first_name || '';
-        const lastName = person.lastName || person.last_name || '';
-        const name = `${firstName} ${lastName}`.trim() || 'Unknown Name';
-        
-        const company = person.companyName || person.company_name || person.company || 'N/A';
-        const title = person.jobTitle || person.job_title || person.title || 'N/A';
-        const emailObj = (person.emails && person.emails.length > 0) ? person.emails[0] : null;
-        const email = emailObj ? emailObj.email : '';
-        const emailStatus = emailObj ? emailObj.validationStatus : '';
-        const linkedin = person.linkedinUrl || person.linkedin_url || person.linkedIn || '';
-        const mobile = person.mobile || person.phone || '';
-        const location = person.location || person.city || '';
-        const country = person.country || '';
-        const seniority = person.seniority || '';
-        const department = person.department || '';
-        const companyDomain = person.companyDomain || person.company_domain || '';
-        
-        return `
-            <div class="person-card card mb-3">
-                <div class="card-body">
-                    <div class="d-flex align-items-start">
-                        <div class="person-avatar me-3">
-                            <i class="fas fa-user-circle fa-2x text-primary"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <h6 class="person-name mb-1">${name}</h6>
-                                    <p class="person-title text-muted mb-1">${title}</p>
-                                    <p class="person-company small text-primary mb-0">
-                                        <i class="fas fa-building me-1"></i>${company}
-                                    </p>
-                                </div>
-                                <div class="person-actions">
-                                    ${email ? `<small class="d-block text-muted" title="Validation Status: ${emailStatus}">
-                                                <i class="fas fa-envelope me-2"></i>${email}
-                                            </small>` : ''}
-                                    ${linkedin ? `<a href="${linkedin}" target="_blank" class="btn btn-outline-info btn-sm" title="View LinkedIn">
-                                        <i class="fab fa-linkedin"></i>
-                                    </a>` : ''}
-                                </div>
-                            </div>
-                            
-                            <div class="person-details">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        ${email ? `<small class="d-block text-muted">
-                                            <i class="fas fa-envelope me-1"></i>${email}
-                                        </small>` : ''}
-                                        ${mobile ? `<small class="d-block text-muted">
-                                            <i class="fas fa-phone me-1"></i>${mobile}
-                                        </small>` : ''}
-                                        ${location || country ? `<small class="d-block text-muted">
-                                            <i class="fas fa-map-marker-alt me-1"></i>${[location, country].filter(Boolean).join(', ')}
-                                        </small>` : ''}
-                                        ${companyDomain ? `<small class="d-block text-muted">
-                                            <i class="fas fa-globe me-1"></i>${companyDomain}
-                                        </small>` : ''}
-                                    </div>
-                                    <div class="col-md-6">
-                                        ${seniority ? `<small class="d-block text-muted">
-                                            <i class="fas fa-level-up-alt me-1"></i>Seniority: ${seniority}
-                                        </small>` : ''}
-                                        ${department ? `<small class="d-block text-muted">
-                                            <i class="fas fa-users me-1"></i>Department: ${department}
-                                        </small>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+    
+    /**
+     * =====================================================================
+     * Enrichment Orchestration
+     * =====================================================================
+     */
+    async function performEnrichment(requestData) {
+        try {
+            const enrichmentID = await PeopleEnrichmentUtils.performEnrichment(requestData);
+            
+            // Start polling for results
+            PeopleEnrichmentUtils.pollForResults(
+                enrichmentID,
+                (attempts, maxAttempts) => {
+                    PeopleEnrichmentUtils.showLoading(`Processing enrichment... (${attempts}/${maxAttempts})`);
+                },
+                (results) => {
+                    enrichmentResults = results || [];
+                    PeopleEnrichmentUtils.displayEnrichmentResults(results);
+                    SurfeApp.ui.showToast(`Enrichment complete! Processed ${results?.length || 0} results.`, 'success');
+                }
+            );
+            
+        } catch (error) {
+            // Error handling is done in PeopleEnrichmentUtils.performEnrichment
+            console.error('Enrichment orchestration failed:', error);
+        }
     }
 
     /**
@@ -637,69 +489,177 @@
      * Utility Functions
      * =====================================================================
      */
-    function validateManualForm(formData) {
-        // According to Surfe API v2 spec, each person needs sufficient identifying data
-        // Better find rates achieved by providing as much information as possible
-        const hasName = formData['first-name'] || formData['last-name'];
-        const hasCompanyInfo = formData['company-name'] || formData['company-domain'];
-        const hasLinkedIn = formData['linkedin-url'];
-
-        // Need at least name OR linkedIn URL (company info alone isn't sufficient for person enrichment)
-        if (!hasName && !hasLinkedIn) {
-            SurfeApp.ui.showToast('Please provide at least a name (first/last) OR LinkedIn URL for person identification', 'error');
-            return false;
-        }
-
-        // Validate field lengths according to Surfe API v2 specification
-        const fieldLimits = {
-            'company-domain': 2000,
-            'company-name': 2000,
-            'linkedin-url': 2000
+    function getIncludeOptions(type) {
+        const prefix = type === 'csv' ? 'csv-' : type === 'bulk' ? 'bulk-' : '';
+        
+        return {
+            email: document.getElementById(`${prefix}include-email`)?.checked || false,
+            mobile: document.getElementById(`${prefix}include-mobile`)?.checked || false,
+            linkedInUrl: document.getElementById(`${prefix}include-linkedin`)?.checked || false,
+            jobHistory: document.getElementById(`${prefix}include-job-history`)?.checked || false
         };
-
-        for (const [field, maxLength] of Object.entries(fieldLimits)) {
-            const value = formData[field];
-            if (value && value.length > maxLength) {
-                SurfeApp.ui.showToast(`${field.replace('-', ' ')} must be ${maxLength} characters or less`, 'error');
-                return false;
-            }
-        }
-
-        // Validate webhook URL format if provided
-        const webhookUrl = formData['webhook-url'];
-        if (webhookUrl && webhookUrl.trim()) {
-            if (!webhookUrl.match(/^https?:\/\/.+/i)) {
-                SurfeApp.ui.showToast('Webhook URL must be a valid HTTP or HTTPS URL', 'error');
-                return false;
-            }
-        }
-
-        return true;
     }
 
-    function validateBulkData(data) {
-        const hasEmails = data.emails && data.emails.length > 0;
-        const hasLinkedIn = data.linkedin_urls && data.linkedin_urls.length > 0;
-        const hasNames = data.people && data.people.length > 0;
-
-        if (!hasEmails && !hasLinkedIn && !hasNames) {
-            SurfeApp.ui.showToast('Please provide at least one type of bulk data', 'error');
-            return false;
-        }
-
-        return true;
-    }
-
-    function parseNamesInput(text) {
-        if (!text) return [];
-        const lines = SurfeApp.utils.parseTextareaLines(text);
-        return lines.map(name => {
-            const parts = name.split(' ');
+    function validateIncludeOptions(type) {
+        const include = getIncludeOptions(type);
+        const hasAtLeastOneField = Object.values(include).some(value => value === true);
+        
+        if (!hasAtLeastOneField) {
             return {
-                first_name: parts[0] || '',
-                last_name: parts.slice(1).join(' ') || ''
+                valid: false,
+                error: 'Please select at least one field to include in the enrichment results'
             };
+        }
+        
+        return { valid: true };
+    }
+
+    function getAccuracyBadgeClass(accuracy) {
+        switch (accuracy) {
+            case 'Very High': return 'bg-success';
+            case 'High': return 'bg-primary';
+            case 'Medium': return 'bg-warning text-dark';
+            case 'Low': return 'bg-danger';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function formatFieldName(field) {
+        return field.replace(/([A-Z])/g, ' $1')
+                   .replace(/^./, str => str.toUpperCase())
+                   .replace('Linkedin', 'LinkedIn')
+                   .replace('Id', 'ID')
+                   .trim();
+    }
+
+    function formatExample(example) {
+        return Object.entries(example)
+            .map(([key, value]) => `${formatFieldName(key)}: "${value}"`)
+            .join('<br>');
+    }
+
+    function toggleCombinationsDisplay() {
+        const container = document.getElementById('combinations-container');
+        const button = document.getElementById('toggle-combinations');
+        
+        if (!container || !button) return;
+        
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            button.innerHTML = '<i class="fas fa-eye-slash me-1"></i>Hide Details';
+        } else {
+            container.style.display = 'none';
+            button.innerHTML = '<i class="fas fa-eye me-1"></i>Show Details';
+        }
+    }
+
+    function validateCurrentCombination() {
+        const formData = new FormData(document.getElementById('people-enrichment-form'));
+        const person = {};
+        
+        for (let [key, value] of formData.entries()) {
+            if (value.trim()) {
+                const fieldName = convertFormFieldName(key);
+                person[fieldName] = value.trim();
+            }
+        }
+
+        const validationResult = validatePersonCombination(person);
+        displayValidationResult(validationResult);
+    }
+
+    function validatePersonCombination(person) {
+        for (const combo of enrichmentCombinations) {
+            if (personMatchesCombination(person, combo)) {
+                return {
+                    valid: true,
+                    combination: combo,
+                    message: `✅ Valid combination: ${combo.name} (${combo.accuracy} accuracy, ${combo.success_rate} success rate)`
+                };
+            }
+        }
+
+        return {
+            valid: false,
+            message: '❌ Current data does not match any valid combination. Please provide more information.',
+            suggestions: getSuggestions(person)
+        };
+    }
+
+    function personMatchesCombination(person, combination) {
+        return combination.fields.every(field => {
+            const value = person[field];
+            if (!value) return false;
+            
+            if (field === 'email' && !PeopleEnrichmentUtils.API_VALIDATION_RULES.EMAIL_REGEX.test(value)) return false;
+            if (field === 'linkedinUrl' && !value.toLowerCase().includes('linkedin.com')) return false;
+            if (field === 'companyDomain' && !value.includes('.')) return false;
+            
+            return true;
         });
+    }
+
+    function getSuggestions(person) {
+        const suggestions = [];
+        
+        if (person.linkedinUrl) {
+            suggestions.push('LinkedIn URL only is sufficient for high accuracy enrichment');
+        } else if (person.email) {
+            suggestions.push('Email address only is sufficient for good enrichment');
+        } else if (person.firstName && person.lastName) {
+            if (!person.companyName && !person.companyDomain) {
+                suggestions.push('Add company name or domain to improve accuracy');
+            }
+        } else {
+            suggestions.push('Provide at least first name + last name, or email, or LinkedIn URL');
+        }
+        
+        return suggestions;
+    }
+
+    function displayValidationResult(result) {
+        const container = document.getElementById('validation-result');
+        if (!container) return;
+        
+        if (result.valid) {
+            container.innerHTML = `
+                <div class="alert alert-success">
+                    <h6>${result.message}</h6>
+                    <small>${result.combination.description}</small>
+                </div>
+            `;
+        } else {
+            const suggestionsHtml = result.suggestions ? 
+                `<ul class="mb-0 mt-2">${result.suggestions.map(s => `<li>${s}</li>`).join('')}</ul>` : '';
+            
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <h6>${result.message}</h6>
+                    ${suggestionsHtml}
+                </div>
+            `;
+        }
+        
+        container.style.display = 'block';
+    }
+
+    function convertFormFieldName(formField) {
+        const mapping = {
+            'first-name': 'firstName',
+            'last-name': 'lastName',
+            'company-name': 'companyName',
+            'company-domain': 'companyDomain',
+            'linkedin-url': 'linkedinUrl',
+            'external-id': 'externalID'
+        };
+        return mapping[formField] || formField;
+    }
+
+    function updateIncludeFieldsUI() {
+        // Only update if dynamic loading hasn't populated them
+        if (Object.keys(includeOptions).length === 0) {
+            console.log('📋 Setting up default include options');
+        }
     }
 
     function resetCurrentForm() {
@@ -708,53 +668,91 @@
             const form = activeSection.querySelector('form');
             if (form) {
                 SurfeApp.utils.resetForm(form);
+                
+                // Reset include checkboxes to default state
+                const includeFields = ['email', 'mobile', 'linkedin', 'job-history'];
+                const prefix = activeSection.id.replace('-input', '');
+                
+                includeFields.forEach(field => {
+                    const checkbox = document.getElementById(`${prefix === 'manual' ? '' : prefix + '-'}include-${field}`);
+                    if (checkbox) {
+                        checkbox.checked = ['email', 'mobile'].includes(field);
+                    }
+                });
+                
+                // Clear validation displays
+                const validationResult = document.getElementById('validation-result');
+                if (validationResult) validationResult.style.display = 'none';
             }
         }
-        clearResults();
+        PeopleEnrichmentUtils.clearResults();
     }
 
-    function clearResults() {
-        enrichmentResults = [];
-        const resultsContainer = document.getElementById('enrichment-results');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <h5 class="mb-3">Ready for Enrichment</h5>
-                    <p class="mb-0">Choose an input method above and provide people data to enrich with professional information.</p>
-                </div>
-            `;
-        }
+    function showError(message) {
+        PeopleEnrichmentUtils.showError(message);
+    }
+
+    function showValidationErrors(errors) {
+        const errorList = errors.map(error => `• ${error}`).join('\n');
+        showError(`Validation failed:\n\n${errorList}`);
     }
 
     /**
      * =====================================================================
-     * Export Functions (Global)
+     * Global Export Functions
      * =====================================================================
      */
     window.exportResults = function(format) {
         if (!enrichmentResults || enrichmentResults.length === 0) {
-            SurfeApp.ui.showToast('No results to export', 'error');
+            SurfeApp.ui.showToast('No results to export', 'warning');
             return;
         }
-
+        
         const timestamp = new Date().toISOString().split('T')[0];
-        const filename = `people_enrichment_${timestamp}.${format}`;
-
-        if (format === 'csv') {
-            SurfeApp.utils.exportToCsv(enrichmentResults, filename, 'people_enrichment');
-        } else if (format === 'json') {
-            SurfeApp.utils.exportToJson(enrichmentResults, filename);
+        const fileName = `people_enrichment_${timestamp}.${format}`;
+        
+        switch (format.toLowerCase()) {
+            case 'csv':
+                SurfeApp.utils.exportToCsv(enrichmentResults, fileName, 'people_enrichment');
+                break;
+                
+            case 'json':
+                SurfeApp.utils.exportToJson(enrichmentResults, fileName);
+                break;
+                
+            default:
+                SurfeApp.ui.showToast('Unsupported export format', 'error');
+                return;
         }
+        
+        console.log(`📁 Exported ${enrichmentResults.length} enrichment results as ${format.toUpperCase()}`);
     };
 
-    /**
-     * =====================================================================
-     * Auto-initialize when DOM is ready
-     * =====================================================================
-     */
-    document.addEventListener('DOMContentLoaded', initializePeopleEnrichment);
+    window.exportPersonData = function(index) {
+        if (!enrichmentResults || !enrichmentResults[index]) {
+            SurfeApp.ui.showToast('Person data not found', 'error');
+            return;
+        }
+        
+        const person = enrichmentResults[index];
+        const fileName = `person_${index + 1}_${Date.now()}.json`;
+        
+        SurfeApp.utils.exportToJson([person], fileName);
+    };
+
+    // Global object for debugging
+    window.PeopleEnrichmentComplete = {
+        switchInputMethod: PeopleEnrichmentUtils.switchInputMethod,
+        validatePersonData: PeopleEnrichmentUtils.validatePersonData,
+        validatePersonCombination,
+        enrichmentCombinations: () => enrichmentCombinations,
+        includeOptions: () => includeOptions,
+        getCurrentResults: () => enrichmentResults,
+        hasSurfeApp: () => typeof SurfeApp !== 'undefined',
+        hasValidCombinations: () => enrichmentCombinations.length > 0,
+        hasUtils: () => typeof PeopleEnrichmentUtils !== 'undefined'
+    };
+
+    console.log('✅ People Enrichment Main Module with Combinations loaded');
 
 })();
