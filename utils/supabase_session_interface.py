@@ -27,39 +27,32 @@ class SupabaseSessionInterface(SessionInterface):
 
     def open_session(self, app, request):
         """This is called at the beginning of each request to load the session."""
-        # FIX: Read the cookie name from app.config, with a fallback
         cookie_name = app.config.get("SESSION_COOKIE_NAME", "session")
         sid = request.cookies.get(cookie_name)
         
         if not sid:
-            # If no session ID, create a new one
             sid = os.urandom(32).hex()
             return SupabaseSession(sid=sid, new=True)
 
         try:
-            # Fetch the session from the database
-            response = self.client.table("sessions").select("data, expiry").eq("id", sid).execute()
+            # FINAL FIX: Access the underlying client object with .client
+            response = self.client.client.table("sessions").select("data, expiry").eq("id", sid).execute()
             
             if not response.data:
-                # Session ID from cookie not found in DB
                 return SupabaseSession(sid=sid, new=True)
 
             session_data = response.data[0]
             expiry_str = session_data.get("expiry")
             
-            # Check if the session is expired
             if expiry_str:
                 expiry = datetime.fromisoformat(expiry_str)
                 if expiry < datetime.utcnow().replace(tzinfo=expiry.tzinfo):
-                    # Session is expired, treat as new
                     return SupabaseSession(sid=sid, new=True)
 
-            # Session is valid, load its data
             data = session_data.get("data")
             return SupabaseSession(data, sid=sid)
         except Exception as e:
             logger.error(f"Error opening session {sid}: {e}")
-            # On error, create a fresh session to avoid crashing
             return SupabaseSession(sid=sid, new=True)
 
 
@@ -70,10 +63,10 @@ class SupabaseSessionInterface(SessionInterface):
         cookie_name = app.config.get("SESSION_COOKIE_NAME", "session")
 
         if not session:
-            # If session was deleted, clear the cookie
             if session.modified:
                 try:
-                    self.client.table("sessions").delete().eq("id", session.sid).execute()
+                    # FINAL FIX: Access the underlying client object with .client
+                    self.client.client.table("sessions").delete().eq("id", session.sid).execute()
                 except Exception as e:
                     logger.error(f"Error deleting session {session.sid}: {e}")
                 response.delete_cookie(cookie_name, domain=domain, path=path)
@@ -82,23 +75,20 @@ class SupabaseSessionInterface(SessionInterface):
         if not self.should_set_cookie(app, session):
             return
 
-        # Calculate expiry date
         lifetime = app.permanent_session_lifetime
         expiry = datetime.utcnow() + lifetime
 
         try:
-            # Save the session data to Supabase
-            self.client.table("sessions").upsert({
+            # FINAL FIX: Access the underlying client object with .client
+            self.client.client.table("sessions").upsert({
                 "id": session.sid,
                 "data": dict(session),
                 "expiry": expiry.isoformat()
             }).execute()
         except Exception as e:
             logger.error(f"Error saving session {session.sid}: {e}")
-            # Don't set the cookie if the save failed
             return
 
-        # Set the session cookie on the user's browser
         response.set_cookie(
             cookie_name,
             session.sid,
