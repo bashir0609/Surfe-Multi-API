@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime, timedelta
 import logging
 from utils.email_service import send_password_reset_email, send_welcome_email
-from flask import request, jsonify, session, redirect, url_for, render_template, current_app
+from flask import request, jsonify, session, redirect, url_for, render_template, current_app, request
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +39,6 @@ def login():
         
         # Update last login
         supabase_client.create_or_update_user(email, user.get('name'))
-        
-        return jsonify({
-            "status": "success",
-            "user": {
-                "email": email,
-                "name": user.get('name')
-            }
-        })
             
         if user:
             # Send welcome email
@@ -56,6 +48,15 @@ def login():
             session['user_email'] = email
             session['user_name'] = name
             session.permanent = True
+            
+        
+        return jsonify({
+            "status": "success",
+            "user": {
+                "email": email,
+                "name": user.get('name')
+            }
+        })
     
     except Exception as e:
         logger.error(f"Login error: {e}")
@@ -174,7 +175,8 @@ def request_password_reset():
             logger.info(f"Reset token stored successfully")
             
             # Generate reset link
-            reset_link = f"http://localhost:5000/auth/reset-password?token={reset_token}&email={email}"
+            base_url = request.host_url.rstrip('/')
+            reset_link = f"{base_url}/auth/reset-password?token={reset_token}&email={email}"
             
             logger.info(f"Reset link generated: {reset_link[:50]}...")
             
