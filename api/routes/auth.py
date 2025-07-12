@@ -35,7 +35,7 @@ def login():
         # Set session
         session['user_email'] = email
         session['user_name'] = user.get('name', email)
-        session.permanent = True
+        # session.permanent = True
         
         # Update last login
         supabase_client.create_or_update_user(email, user.get('name'))
