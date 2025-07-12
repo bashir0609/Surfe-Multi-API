@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Surfe Multi API{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Create an Account</h4>
+                </div>
+                <div class="card-body">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Register</button>
+                        <a href="/auth/login" class="btn btn-link">Already have an account? Login</a>
+                    </form>
+                    <div id="error-message" class="alert alert-danger mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const errorDiv = document.getElementById('error-message');
+    
+    try {
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, email, password }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success' && data.redirect_url) {
+            // On successful registration, redirect to the URL provided by the server.
+            window.location.href = data.redirect_url;
+        } else {
+            // If registration fails, display the error from the server.
+            errorDiv.textContent = data.error || 'Registration failed. Please try again.';
+            errorDiv.classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Registration request failed:', error);
+        errorDiv.textContent = 'An error occurred while trying to register. Please try again later.';
+        errorDiv.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}
