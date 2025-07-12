@@ -687,17 +687,14 @@ SurfeApp.api = {
      */
     request: async function (method, endpoint, data = null, options = {}) {
         const config = {
-            // 1. First, spread any miscellaneous options passed in
             ...options,
-
-            // 2. Then, explicitly define the method and headers to ensure they are correct
             method: method.toUpperCase(),
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                // 3. Finally, add any custom headers from the options
                 ...options.headers
-            }
+            },
+            credentials: 'include'  // ADD THIS LINE - This sends cookies with the request
         };
 
         if (data && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PUT')) {
