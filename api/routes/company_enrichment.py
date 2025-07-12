@@ -68,7 +68,7 @@ def _validate_and_enrich_companies(data: dict):
         return {**err_data, "success": False}, status
 
 
-@set_user_context
+@require_user_context
 def enrich_companies():
     """Enrich a list of companies from a JSON body."""
     data = request.get_json()
@@ -79,7 +79,7 @@ def enrich_companies():
     return _validate_and_enrich_companies(data)
 
 
-@set_user_context
+@require_user_context
 def enrich_companies_bulk():
     """Bulk enrich company data from a CSV file."""
     if "file" not in request.files:
@@ -130,7 +130,7 @@ def enrich_companies_bulk():
         }, 500
 
 
-@set_user_context
+@require_user_context
 def get_enrichment_status(enrichment_id: str):
     """Checks the status of a specific company enrichment job."""
     if not enrichment_id:

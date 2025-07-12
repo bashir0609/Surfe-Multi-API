@@ -44,14 +44,12 @@ except ImportError:
     DATABASE_CONFIG_AVAILABLE = False
 
 PUBLIC_PAGES = [
-    "index",
-    "login_page",
-    "register_page",
-    "forgot_password_page",
-    "reset_password_page",
-    "health_check",
-]
-
+    'login_page',
+    'register_page',
+    'forgot_password_page',
+    'reset_password_page',
+    'health_check'
+    ]
 
 def register_routes(app):
     """Register all routes with the Flask app"""
@@ -129,7 +127,7 @@ def register_routes(app):
 
     # --- Configuration Info Endpoint ---
     @app.route("/config-info")
-    @set_user_context
+    @require_user_context
     def config_info():
         """Get current configuration information (development only)"""
         if app.config.get("ENVIRONMENT") != "development":
@@ -164,44 +162,44 @@ def register_routes(app):
 
     # --- Core API Routes ---
     @app.route("/api/stats", methods=["GET"])
-    @set_user_context
+    @require_user_context
     def api_stats():
         return dashboard.get_api_stats()
 
     @app.route("/api/diagnostics/performance", methods=["GET"])
-    @set_user_context
+    @require_user_context
     def api_performance_metrics():
         return diagnostics.get_performance_metrics()
 
     @app.route("/api/diagnostics/config", methods=["GET"])
-    @set_user_context
+    @require_user_context
     def api_diagnostics_config():
         return diagnostics.get_diagnostics_config()
 
     # --- Surfe Search API Routes ---
     @app.route("/api/v2/people/search", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_people_search_v2():
         return people_search.search_people_v2()
 
     @app.route("/api/v2/companies/search", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_company_search_v2():
         return company_search.search_companies()
 
     # --- Surfe Enrichment API Routes ---
     @app.route("/api/v2/people/enrich", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_people_enrich():
         return people_enrichment.enrich_people()
 
     @app.route("/api/v2/people/enrich/bulk", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_people_enrich_bulk():
         return people_enrichment.enrich_people_bulk()
 
     @app.route("/api/v2/people/enrich/status/<enrichment_id>", methods=["GET"])
-    @set_user_context
+    @require_user_context
     def api_get_people_enrichment_status(enrichment_id):
         return people_enrichment.get_enrichment_status(enrichment_id)
 
@@ -210,58 +208,58 @@ def register_routes(app):
         return people_enrichment.get_enrichment_combinations()
 
     @app.route("/api/v2/companies/enrich", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_company_enrich():
         return company_enrichment.enrich_companies()
 
     @app.route("/api/v2/companies/enrich/bulk", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_company_enrich_bulk():
         return company_enrichment.enrich_companies_bulk()
 
     @app.route("/api/v2/companies/enrich/status/<enrichment_id>", methods=["GET"])
-    @set_user_context
+    @require_user_context
     def api_get_company_enrichment_status(enrichment_id):
         return company_enrichment.get_enrichment_status(enrichment_id)
 
     # --- Settings API Routes (Original) ---
     @app.route("/api/settings/config", methods=["GET"])
-    @set_user_context
+    @require_user_context
     def api_get_settings_config():
         return settings.get_settings_config()
 
     @app.route("/api/settings/keys", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_add_key():
         return settings.add_api_key()
 
     @app.route("/api/settings/keys", methods=["DELETE"])
-    @set_user_context
+    @require_user_context
     def api_remove_key():
         return settings.remove_api_key()
 
     @app.route("/api/settings/keys/status", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_update_key_status():
         return settings.update_key_status()
 
     @app.route("/api/settings/select", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_select_key():
         return settings.select_api_key()
 
     @app.route("/api/settings/test", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_test_key():
         return settings.test_selected_api_key()
 
     @app.route("/api/settings/refresh", methods=["POST"])
-    @set_user_context
+    @require_user_context
     def api_refresh_keys():
         return settings.refresh_api_keys()
 
     @app.route("/api/debug/check-keys")
-    @set_user_context
+    @require_user_context
     def debug_check_keys():
         from core.user_context import get_current_user_email
         from database.supabase_client import supabase_client
@@ -294,7 +292,7 @@ def register_routes(app):
         return jsonify(result)
 
     @app.route("/api/debug/test-surfe-call")
-    @set_user_context
+    @require_user_context
     def debug_test_surfe_call():
         from core.user_context import get_current_user_email
         from database.supabase_client import supabase_client
@@ -343,7 +341,7 @@ def register_routes(app):
         })
 
     @app.route("/api/debug/raw-surfe-test")
-    @set_user_context
+    @require_user_context
     def debug_raw_surfe_test():
         import requests
         from core.user_context import get_current_user_email
@@ -392,7 +390,7 @@ def register_routes(app):
             })
         
     @app.route("/api/debug/check-raw-key")
-    @set_user_context
+    @require_user_context
     def debug_check_raw_key():
         from core.user_context import get_current_user_email
         from database.supabase_client import supabase_client
@@ -417,7 +415,7 @@ def register_routes(app):
             return jsonify({"error": "No active key found"})
 
     @app.route("/api/debug/test-final")
-    @set_user_context
+    @require_user_context
     def debug_test_final():
         from core.user_context import get_current_user_email
         from utils.supabase_api_client import supabase_surfe_client
@@ -450,7 +448,7 @@ def register_routes(app):
             })
         
     @app.route("/api/debug/test-direct-api")
-    @set_user_context
+    @require_user_context
     def debug_test_direct_api():
         import requests
         from core.user_context import get_current_user_email
@@ -488,7 +486,7 @@ def register_routes(app):
         })
 
     @app.route("/api/debug/verify-api-key")
-    @set_user_context
+    @require_user_context
     def debug_verify_api_key():
         import requests
         
@@ -517,47 +515,47 @@ def register_routes(app):
     if DATABASE_CONFIG_AVAILABLE:
 
         @app.route("/api/settings/add-api-key", methods=["POST"])
-        @set_user_context
+        @require_user_context
         def api_add_api_key_enhanced():
             return settings.add_api_key()
 
         @app.route("/api/settings/remove-api-key", methods=["POST"])
-        @set_user_context
+        @require_user_context
         def api_remove_api_key_enhanced():
             return settings.remove_api_key()
 
         @app.route("/api/settings/select-api-key", methods=["POST"])
-        @set_user_context
+        @require_user_context
         def api_select_api_key_enhanced():
             return settings.select_api_key()
 
         @app.route("/api/settings/enable-api-key", methods=["POST"])
-        @set_user_context
+        @require_user_context
         def api_enable_api_key():
             return settings.enable_api_key()
 
         @app.route("/api/settings/disable-api-key", methods=["POST"])
-        @set_user_context
+        @require_user_context
         def api_disable_api_key():
             return settings.disable_api_key()
 
         @app.route("/api/settings/test-api-key", methods=["POST"])
-        @set_user_context
+        @require_user_context
         def api_test_api_key_enhanced():
             return settings.test_api_key()
 
         @app.route("/api/settings/list-api-keys", methods=["GET"])
-        @set_user_context
+        @require_user_context
         def api_list_api_keys():
             return settings.list_api_keys()
 
         @app.route("/api/settings/current-user", methods=["GET"])
-        @set_user_context
+        @require_user_context
         def api_get_current_user_info():
             return settings.get_current_user_info()
 
         @app.route("/api/settings/usage-stats", methods=["GET"])
-        @set_user_context
+        @require_user_context
         def api_get_usage_stats():
             return settings.get_api_usage_stats()
 

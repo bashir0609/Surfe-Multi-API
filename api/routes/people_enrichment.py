@@ -349,7 +349,7 @@ def _handle_enrichment_exception(e):
     return {**err_data, "success": False}, code
 
 
-@set_user_context
+@require_user_context
 def get_enrichment_combinations():
     """Return available enrichment combinations for the frontend."""
     try:
@@ -363,7 +363,7 @@ def get_enrichment_combinations():
         }, 500
 
 
-@set_user_context
+@require_user_context
 def enrich_people():
     """Submits a job to enrich a list of people from a JSON body."""
     try:
@@ -403,7 +403,7 @@ def enrich_people():
         return _handle_enrichment_exception(e)
 
 
-@set_user_context
+@require_user_context
 def enrich_people_bulk():
     """Submits a job to enrich people from a CSV file."""
     try:
@@ -466,7 +466,7 @@ def enrich_people_bulk():
         return _handle_enrichment_exception(e)
 
 
-@set_user_context
+@require_user_context
 def get_enrichment_status(enrichment_id: str):
     """
     Checks the status of a specific people enrichment job.

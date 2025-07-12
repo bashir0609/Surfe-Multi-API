@@ -158,7 +158,7 @@ vercel --prod
 ## 📖 Usage
 
 ### User Context
-The application automatically manages user context through session cookies and the `@set_user_context` decorator.
+The application automatically manages user context through session cookies and the `@require_user_context` decorator.
 
 ### API Key Management
 
@@ -329,7 +329,7 @@ Contains the business logic for each endpoint group:
 - **`config.py`**: General app configuration
 
 ### 6. **Core Functionality (`core/`)**
-- **`dependencies.py`**: Decorators like `@set_user_context`
+- **`dependencies.py`**: Decorators like `@require_user_context`
 - **`user_context.py`**: User session management
 
 ### 7. **Utilities (`utils/`)**
@@ -466,7 +466,7 @@ SURFE_API_KEY_2=your-api-key-2
 ### Adding New Routes
 1. Define the route handler in appropriate file under `api/routes/`
 2. Add the route definition to `routes.py`
-3. Apply necessary decorators (`@set_user_context`)
+3. Apply necessary decorators (`@require_user_context`)
 
 ### Database Schema
 The application expects these Supabase tables:

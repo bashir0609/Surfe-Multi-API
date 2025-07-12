@@ -8,7 +8,7 @@ from core.user_context import set_user_context
 logger = logging.getLogger(__name__)
 
 
-@set_user_context
+@require_user_context
 def search_people_v1():
     """
     Search for people using v1 format, which is converted to v2 format
@@ -73,7 +73,7 @@ def _convert_v1_to_v2_dict(v1_data: dict) -> dict:
     return v2_data
 
 
-@set_user_context
+@require_user_context
 def search_people_v2():
     """
     Search for people using Surfe API v2, with server-side pagination

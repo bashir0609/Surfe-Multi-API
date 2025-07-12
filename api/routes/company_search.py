@@ -6,7 +6,7 @@ from core.user_context import set_user_context, get_current_user_email
 logger = logging.getLogger(__name__)
 
 
-@set_user_context
+@require_user_context
 def search_companies():
     """
     Search for companies using Surfe API v2 structure with rotation system and paginated fetching.

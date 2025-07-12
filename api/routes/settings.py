@@ -19,7 +19,7 @@ def generate_key_name(api_id: int) -> str:
     """Generate standardized key name from API ID"""
     return f"SURFE_API_KEY_{api_id}"
 
-@set_user_context
+@require_user_context
 def add_api_key():
     """Add a new API key to Supabase - user email auto-retrieved from context"""
     try:
@@ -82,7 +82,7 @@ def add_api_key():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def remove_api_key():
     """Remove an API key from Supabase using API ID - user email auto-retrieved"""
     try:
@@ -145,7 +145,7 @@ def remove_api_key():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def refresh_api_keys():
     """Refresh API keys from Supabase database"""
     try:
@@ -168,7 +168,7 @@ def refresh_api_keys():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def select_api_key():
     """Select a specific API key using API ID - user email auto-retrieved from context"""
     try:
@@ -227,7 +227,7 @@ def select_api_key():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def enable_api_key():
     """Enable a specific API key using API ID - user email auto-retrieved"""
     try:
@@ -286,7 +286,7 @@ def enable_api_key():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def disable_api_key():
     """Disable a specific API key using API ID - user email auto-retrieved"""
     try:
@@ -345,7 +345,7 @@ def disable_api_key():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def test_api_key():
     """Test the currently selected API key"""
     try:
@@ -402,7 +402,7 @@ def test_api_key():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def list_api_keys():
     """List all API keys for the current user with API IDs"""
     try:
@@ -441,7 +441,7 @@ def list_api_keys():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def get_current_user_info():
     """Get current user information and context"""
     try:
@@ -552,7 +552,7 @@ def _get_context_source():
             "timestamp": datetime.utcnow().isoformat()
         }), 500
 
-@set_user_context
+@require_user_context
 def get_api_usage_stats():
     """Get API usage statistics from Supabase"""
     try:
