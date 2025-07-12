@@ -14,4 +14,3 @@ supabase==2.0.0
 flask-mail==0.9.1
 httpx
 flask_cors
-Flask-Session

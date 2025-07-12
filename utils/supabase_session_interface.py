@@ -27,7 +27,10 @@ class SupabaseSessionInterface(SessionInterface):
 
     def open_session(self, app, request):
         """This is called at the beginning of each request to load the session."""
-        sid = request.cookies.get(app.session_cookie_name)
+        # FIX: Read the cookie name from app.config, with a fallback
+        cookie_name = app.config.get("SESSION_COOKIE_NAME", "session")
+        sid = request.cookies.get(cookie_name)
+        
         if not sid:
             # If no session ID, create a new one
             sid = os.urandom(32).hex()
@@ -64,6 +67,7 @@ class SupabaseSessionInterface(SessionInterface):
         """This is called at the end of each request to save the session."""
         domain = self.get_cookie_domain(app)
         path = self.get_cookie_path(app)
+        cookie_name = app.config.get("SESSION_COOKIE_NAME", "session")
 
         if not session:
             # If session was deleted, clear the cookie
@@ -72,7 +76,7 @@ class SupabaseSessionInterface(SessionInterface):
                     self.client.table("sessions").delete().eq("id", session.sid).execute()
                 except Exception as e:
                     logger.error(f"Error deleting session {session.sid}: {e}")
-                response.delete_cookie(app.session_cookie_name, domain=domain, path=path)
+                response.delete_cookie(cookie_name, domain=domain, path=path)
             return
 
         if not self.should_set_cookie(app, session):
@@ -96,7 +100,7 @@ class SupabaseSessionInterface(SessionInterface):
 
         # Set the session cookie on the user's browser
         response.set_cookie(
-            app.session_cookie_name,
+            cookie_name,
             session.sid,
             expires=self.get_expiration_time(app, session),
             httponly=self.get_cookie_httponly(app),
