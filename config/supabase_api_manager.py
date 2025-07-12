@@ -23,7 +23,7 @@ class SupabaseApiManager:
         self.selected_key_cache = None
         self.cache_timeout = 300  # 5 minutes cache
         self.last_cache_update = None
-        self.default_user_email = "system@localhost"  # Default system user
+        self.default_user_email = "islahwebservice@gmail.com"  # Default system user
         self.current_user_email = None  # Track current user
     
     def load_keys_from_database(self, user_email: str = None) -> List[Dict]:
