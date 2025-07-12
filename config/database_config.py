@@ -259,27 +259,13 @@ def get_database_connection_string():
     return f"Supabase URL: {config['url']}, Has Key: {bool(config['anon_key'])}"
 
 def setup_logging():
-    """Setup logging based on environment configuration"""
-    log_config = db_config.config['logging']
+    log_level = logging.INFO if not DEBUG else logging.DEBUG
     
-    # Create logs directory if it doesn't exist
-    log_file = log_config['file']
-    log_dir = os.path.dirname(log_file)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    
-    # Configure logging
     logging.basicConfig(
-        level=getattr(logging, log_config['level'].upper()),
-        format=log_config['format'],
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]  # Console only
     )
-    
-    logger.info(f"Logging configured: {log_config['level']} level, output to {log_file}")
-
 if __name__ == "__main__":
     print("🔧 Database Configuration Manager")
     print("=" * 50)
