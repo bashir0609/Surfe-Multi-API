@@ -5,6 +5,7 @@ from typing import Dict, Optional
 import logging
 from dotenv import load_dotenv
 
+DEBUG = os.getenv('DEBUG', 'true').lower() == 'true'
 # Load environment variables from .env file
 load_dotenv()
 
