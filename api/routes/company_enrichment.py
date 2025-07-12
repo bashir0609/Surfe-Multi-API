@@ -8,7 +8,7 @@ from utils.supabase_api_client import (
     is_valid_domain,
 )
 
-from core.user_context import set_user_context
+from core.user_context import set_user_context, get_current_user_email, require_user_context
 
 logger = logging.getLogger(__name__)
 

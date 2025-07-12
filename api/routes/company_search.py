@@ -1,7 +1,7 @@
 import logging
 from flask import request, jsonify
 from utils.supabase_api_client import supabase_surfe_client
-from core.user_context import set_user_context, get_current_user_email
+from core.user_context import set_user_context, get_current_user_email, require_user_context
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ import logging
 from flask import request, jsonify, g
 from config.supabase_api_manager import supabase_api_manager
 from utils.supabase_api_client import supabase_surfe_client
-from core.user_context import set_user_context, get_current_user_email
+from core.user_context import set_user_context, require_user_context, require_user_context, require_user_context, get_current_user_email, require_user_context
 from datetime import datetime
 from database.supabase_client import supabase_client
 

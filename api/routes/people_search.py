@@ -3,7 +3,7 @@ import logging
 from flask import request, jsonify
 from utils.supabase_api_client import supabase_api_manager
 from core.dependencies import validate_request_data
-from core.user_context import set_user_context
+from core.user_context import set_user_context, require_user_context
 
 logger = logging.getLogger(__name__)
 

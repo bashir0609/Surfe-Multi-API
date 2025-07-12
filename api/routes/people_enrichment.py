@@ -3,7 +3,7 @@ import io
 import pandas as pd
 from flask import request, jsonify
 from utils.supabase_api_client import supabase_surfe_client
-from core.user_context import set_user_context
+from core.user_context import set_user_context, require_user_context
 
 logger = logging.getLogger(__name__)
 

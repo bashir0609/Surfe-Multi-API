@@ -2,7 +2,7 @@ from flask import render_template, jsonify, session, request
 from datetime import datetime
 import logging
 from functools import wraps
-from core.user_context import set_user_context
+from core.user_context import set_user_context, get_current_user_email, require_user_context
 from config.supabase_api_manager import supabase_api_manager
 from supabase.client import create_client, Client
 from database.supabase_client import supabase_client
