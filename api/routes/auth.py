@@ -39,16 +39,8 @@ def login():
         
         # Update last login
         supabase_client.create_or_update_user(email, user.get('name'))
-            
-        if user:
-            # Send welcome email
-            send_welcome_email(email, name)
-
-            # Auto-login after registration
-            session['user_email'] = email
-            session['user_name'] = name
-            session.permanent = True
-            
+        
+        # REMOVE EVERYTHING FROM HERE TO LINE 50 - it's duplicate code
         
         return jsonify({
             "status": "success",
