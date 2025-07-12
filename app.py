@@ -9,7 +9,7 @@ from flask_cors import CORS
 from datetime import timedelta
 from config.supabase_api_manager import supabase_api_manager
 from utils.email_service import init_mail
-from flask_session import Session # <-- IMPORT
+# <-- The 'from flask_session import Session' line has been removed.
 
 # --- Database Configuration Integration ---
 try:
@@ -51,24 +51,19 @@ def create_app():
     # Use a stable secret key from environment variables
     app.config["SECRET_KEY"] = os.environ.get("SESSION_SECRET", "a-strong-dev-secret-key")
     
-    # Configure Flask-Session
-    app.config["SESSION_TYPE"] = "filesystem" # This is a placeholder, we override it below
-    app.config["SESSION_PERMANENT"] = True
+    # Configure session cookie properties directly
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
-    app.config["SESSION_USE_SIGNER"] = True
+    app.config["SESSION_COOKIE_NAME"] = "surfe_session" # Set a specific cookie name
     app.config["SESSION_COOKIE_SECURE"] = os.environ.get("APP_ENVIRONMENT") == "production"
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-
-    # Initialize the Session extension
-    Session(app)
 
     # Override the session interface with our custom Supabase implementation
     if DATABASE_AVAILABLE and SESSION_INTERFACE_AVAILABLE:
         app.session_interface = SupabaseSessionInterface(supabase_client)
         print("✅ Flask session interface configured for Supabase.")
     else:
-        print("⚠️ Could not configure Supabase session interface. Using default.")
+        print("⚠️ Could not configure Supabase session interface. Using default Flask session.")
     # --- END VERCEL FIX ---
 
     if DATABASE_CONFIG_AVAILABLE:
