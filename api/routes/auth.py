@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime, timedelta
 import logging
 from utils.email_service import send_password_reset_email, send_welcome_email
-from flask import request, jsonify, session, redirect, url_for, render_template, current_app, request
+from flask import request, jsonify, session, redirect, url_for, render_template, current_app
 
 logger = logging.getLogger(__name__)
 
@@ -28,22 +28,23 @@ def login():
         if not user:
             return jsonify({"error": "Invalid credentials"}), 401
         
-        # Check password (you'll need to add password_hash to users table)
+        # Check password (assuming you have 'password_hash' in your users table)
         if not check_password_hash(user.get('password_hash', ''), password):
             return jsonify({"error": "Invalid credentials"}), 401
         
         # Set session
         session['user_email'] = email
         session['user_name'] = user.get('name', email)
-        # session.permanent = True
         
         # Update last login
         supabase_client.create_or_update_user(email, user.get('name'))
         
-        # REMOVE EVERYTHING FROM HERE TO LINE 50 - it's duplicate code
-        
+        # PERMANENT FIX: Return a redirect URL in the JSON response.
+        # url_for('index') points to your main '/' route, which correctly
+        # shows the dashboard if the user is logged in.
         return jsonify({
             "status": "success",
+            "redirect_url": url_for('index'),
             "user": {
                 "email": email,
                 "name": user.get('name')
@@ -78,21 +79,19 @@ def register():
         if existing_user:
             return jsonify({"error": "User already exists"}), 409
         
-        # Create user (you'll need to modify create_or_update_user to handle passwords)
         password_hash = generate_password_hash(password)
         
-        # For now, just create the user without password
-        # You'll need to add password_hash column to users table
-        user = supabase_client.create_or_update_user(email, name)
+        # You need to ensure your create_or_update_user function can handle the password_hash
+        user = supabase_client.create_or_update_user(email, name, password_hash=password_hash)
         
         if user:
             # Auto-login after registration
             session['user_email'] = email
             session['user_name'] = name
-            session.permanent = True
             
             return jsonify({
                 "status": "success",
+                "redirect_url": url_for('index'), # Also redirect to dashboard after registration
                 "user": {
                     "email": email,
                     "name": name
@@ -134,52 +133,36 @@ def request_password_reset():
     data = request.get_json() or request.form
     email = data.get('email')
     
-    logger.info(f"Password reset requested for email: {email}")
-    
     if not email:
         return jsonify({"error": "Email required"}), 400
     
     try:
-        # Check if user exists
-        logger.info(f"Checking if user exists: {email}")
         user = supabase_client.get_user_profile(email)
         
         if not user:
-            logger.info(f"User not found: {email}")
-            # Don't reveal if user exists or not
             return jsonify({
                 "status": "success",
                 "message": "If the email exists, a reset link has been sent"
             })
         
-        logger.info(f"User found, generating reset token")
-        
-        # Generate reset token
         reset_token = secrets.token_urlsafe(32)
         reset_expires = datetime.utcnow() + timedelta(hours=1)
         
-        logger.info(f"Attempting to store reset token in database")
-        
-        # Store reset token in database
         stored = supabase_client.set_password_reset_token(email, reset_token, reset_expires)
         
         if stored:
-            logger.info(f"Reset token stored successfully")
-            
-            # Generate reset link
             base_url = request.host_url.rstrip('/')
             reset_link = f"{base_url}/auth/reset-password?token={reset_token}&email={email}"
             
-            logger.info(f"Reset link generated: {reset_link[:50]}...")
+            # In a real app, you would email this link.
+            # send_password_reset_email(email, reset_link)
             
-            # Always return the link in development for testing
             return jsonify({
                 "status": "success",
                 "message": "Reset link generated",
-                "dev_link": reset_link
+                "dev_link": reset_link # For testing
             })
         else:
-            logger.error("Failed to store reset token in database")
             return jsonify({"error": "Failed to generate reset token"}), 500
             
     except Exception as e:
@@ -189,12 +172,10 @@ def request_password_reset():
 def reset_password():
     """Reset password with token"""
     if request.method == 'GET':
-        # Show reset form
         token = request.args.get('token')
         email = request.args.get('email')
         return render_template('reset_password.html', token=token, email=email)
     
-    # Handle POST
     data = request.get_json() or request.form
     token = data.get('token')
     email = data.get('email')
@@ -204,11 +185,9 @@ def reset_password():
         return jsonify({"error": "Missing required fields"}), 400
     
     try:
-        # Verify token
         if not supabase_client.verify_reset_token(email, token):
             return jsonify({"error": "Invalid or expired token"}), 400
         
-        # Update password
         password_hash = generate_password_hash(new_password)
         
         if supabase_client.update_user_password(email, password_hash):
@@ -239,15 +218,12 @@ def change_password():
         email = session.get('user_email')
         user = supabase_client.get_user_profile(email)
         
-        # Verify current password
         if not check_password_hash(user.get('password_hash', ''), current_password):
             return jsonify({"error": "Current password is incorrect"}), 401
         
-        # Update password
         password_hash = generate_password_hash(new_password)
         
-        # Update in database (you'll need to implement this)
-        # supabase_client.update_user_password(email, password_hash)
+        supabase_client.update_user_password(email, password_hash)
         
         return jsonify({
             "status": "success",

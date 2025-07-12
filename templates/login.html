@@ -14,14 +14,14 @@
                     <form id="loginForm">
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" required>
+                            <input type="email" class="form-control" id="email" name="email" required>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" required>
+                            <input type="password" class="form-control" id="password" name="password" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Login</button>
-                        <a href="/register" class="btn btn-link">Register</a>
+                        <a href="/auth/register" class="btn btn-link">Register</a>
                         <a href="/auth/forgot-password" class="btn btn-link">Forgot Password?</a>
                     </form>
                     <div id="error-message" class="alert alert-danger mt-3 d-none"></div>
@@ -50,14 +50,19 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         
         const data = await response.json();
         
-        if (response.ok) {
-            window.location.href = '/';
+        // --- PERMANENT FIX ---
+        // Check for a successful response AND the redirect_url from the backend.
+        if (response.ok && data.status === 'success' && data.redirect_url) {
+            // Redirect to the URL provided by the server (e.g., '/dashboard')
+            window.location.href = data.redirect_url;
         } else {
-            errorDiv.textContent = data.error || 'Login failed';
+            // If login fails, display the error from the server.
+            errorDiv.textContent = data.error || 'Login failed. Please check your credentials.';
             errorDiv.classList.remove('d-none');
         }
     } catch (error) {
-        errorDiv.textContent = 'An error occurred';
+        console.error('Login request failed:', error);
+        errorDiv.textContent = 'An error occurred while trying to log in. Please try again later.';
         errorDiv.classList.remove('d-none');
     }
 });

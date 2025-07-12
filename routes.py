@@ -62,6 +62,12 @@ def register_routes(app):
             return dashboard.dashboard_view()
         # Otherwise show the homepage
         return render_template("homepage.html")
+    
+    # --- Favicon Route ---
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
     @app.route("/people-search")
     def people_search_page():
